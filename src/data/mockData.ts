@@ -5,12 +5,12 @@ const today = new Date();
 const todayStr = today.toISOString().split('T')[0];
 
 export const mockUsers: User[] = [
-  { id: 'u1', name: 'Andi Pratama', nim: '2501234567', role: 'student', faculty: 'School of Computer Science' },
-  { id: 'u2', name: 'Sari Dewi', nim: '2501234568', role: 'student', faculty: 'School of Business Management' },
-  { id: 'u3', name: 'Budi Santoso', nim: '2501234569', role: 'student', faculty: 'School of Design' },
-  { id: 'u4', name: 'Ahmad Driver', driver_id: 'DRV001', role: 'driver', assigned_trip_id: `${todayStr}-ang-1` },
-  { id: 'u5', name: 'Hendra Kusuma', driver_id: 'DRV002', role: 'driver', assigned_trip_id: `${todayStr}-as-0` },
-  { id: 'u6', name: 'Super Admin', admin_id: 'ADM001', role: 'admin' },
+  { id: 'u1', name: 'Andi Pratama', nim: '2501234567', role: 'student', faculty: 'School of Computer Science', password: 'binus123' },
+  { id: 'u2', name: 'Sari Dewi', nim: '2501234568', role: 'student', faculty: 'School of Business Management', password: 'binus123' },
+  { id: 'u3', name: 'Budi Santoso', nim: '2501234569', role: 'student', faculty: 'School of Design', password: 'binus123' },
+  { id: 'u4', name: 'Ahmad Fauzi', driver_id: 'DRV001', role: 'driver', assigned_trip_id: `${todayStr}-ang-1`, password: 'driver123', bus_unit: 'B 1234 ABC' },
+  { id: 'u5', name: 'Hendra Kusuma', driver_id: 'DRV002', role: 'driver', assigned_trip_id: `${todayStr}-as-0`, password: 'driver123', bus_unit: 'B 5678 DEF' },
+  { id: 'u6', name: 'Super Admin', admin_id: 'ADM001', role: 'admin', password: 'admin123' },
 ];
 
 export const initialTrips: Trip[] = generateTripsForDay(today);

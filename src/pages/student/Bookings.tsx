@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getBookingsForUser, getTrips, saveBookings, getBookings } from '../../data/mockData';
 import { Booking, Trip } from '../../types';
 import { getDirectionLabel } from '../../data/schedules';
+import { useAuth as useAuthCtx } from '../../context/AuthContext';
 
 function getStatusLabel(status: string) {
   const map: Record<string, string> = {
@@ -28,18 +29,78 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function QRPlaceholder({ bookingId }: { bookingId: string }) {
+function BookingReceipt({ booking, trip, userName, nim, faculty }: {
+  booking: Booking;
+  trip: Trip;
+  userName: string;
+  nim?: string;
+  faculty?: string;
+}) {
+  const dateStr = new Date(booking.created_at).toLocaleDateString('id-ID', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+  const timeStr = new Date(booking.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
   return (
-    <div className="flex flex-col items-center gap-2 p-4 bg-muted rounded-xl">
-      <div className="w-28 h-28 bg-card border-2 border-dashed border-primary/30 rounded-xl flex items-center justify-center">
-        <div className="grid grid-cols-6 gap-0.5 p-1.5">
-          {Array.from({ length: 36 }, (_, i) => (
-            <div key={i} className={`w-2 h-2 rounded-[1px] ${[0,1,2,3,4,6,12,18,24,30,31,32,33,34,5,11,17,23,29,35,7,8,9,14,15,21,22,28].includes(i) ? 'bg-foreground' : ''}`} />
-          ))}
+    <div className="mt-3 rounded-2xl border-2 border-dashed border-primary/30 overflow-hidden">
+      <div className="bg-primary px-4 py-3 text-center">
+        <p className="text-primary-foreground font-black text-sm tracking-widest uppercase">🎫 BINUS Shuttle</p>
+        <p className="text-primary-foreground/70 text-xs">E-Tiket Perjalanan</p>
+      </div>
+      <div className="relative flex items-center">
+        <div className="w-4 h-4 rounded-full bg-background border-2 border-dashed border-primary/30 absolute -left-2" />
+        <div className="flex-1 border-t-2 border-dashed border-primary/20 mx-2" />
+        <div className="w-4 h-4 rounded-full bg-background border-2 border-dashed border-primary/30 absolute -right-2" />
+      </div>
+      <div className="bg-muted/30 px-4 py-3 space-y-2.5">
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div>
+            <p className="text-muted-foreground font-medium">Nama</p>
+            <p className="font-bold text-foreground">{userName}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground font-medium">NIM</p>
+            <p className="font-bold text-foreground">{nim || '—'}</p>
+          </div>
+          <div className="col-span-2">
+            <p className="text-muted-foreground font-medium">Fakultas</p>
+            <p className="font-bold text-foreground text-[11px] leading-tight">{faculty || '—'}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground font-medium">No. Kursi</p>
+            <p className="font-bold text-foreground">#{booking.seat_number}</p>
+          </div>
+        </div>
+        <div className="border-t border-dashed border-border pt-2.5 space-y-1.5 text-xs">
+          <div>
+            <p className="text-muted-foreground font-medium">Rute Perjalanan</p>
+            <p className="font-bold text-primary">{getDirectionLabel(trip.direction)}</p>
+            {trip.via_base && <span className="text-[10px] text-accent font-semibold">via BASE</span>}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <p className="text-muted-foreground font-medium">Jam Berangkat</p>
+              <p className="font-black text-foreground text-base">{trip.departure_time}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground font-medium">Kapasitas Bus</p>
+              <p className="font-bold text-foreground">20 Kursi</p>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-dashed border-border pt-2.5 text-xs text-muted-foreground">
+          <p>Dipesan: {dateStr} · {timeStr}</p>
+          <p className="font-mono text-[10px] mt-1 text-muted-foreground/60">ID: {booking.id.slice(-12).toUpperCase()}</p>
         </div>
       </div>
-      <p className="text-xs font-mono font-bold text-foreground">{bookingId.slice(-8).toUpperCase()}</p>
-      <p className="text-xs text-muted-foreground">Tunjukkan kepada pengemudi</p>
+      <div className="relative flex items-center">
+        <div className="w-4 h-4 rounded-full bg-background border-2 border-dashed border-primary/30 absolute -left-2" />
+        <div className="flex-1 border-t-2 border-dashed border-primary/20 mx-2" />
+        <div className="w-4 h-4 rounded-full bg-background border-2 border-dashed border-primary/30 absolute -right-2" />
+      </div>
+      <div className="bg-primary/5 px-4 py-2 text-center">
+        <p className="text-[10px] text-muted-foreground">Tunjukkan e-tiket ini kepada pengemudi saat boarding</p>
+      </div>
     </div>
   );
 }
@@ -48,8 +109,7 @@ export default function StudentBookings() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [expandedQR, setExpandedQR] = useState<string | null>(null);
-  const [cancelConfirm, setCancelConfirm] = useState<string | null>(null);
+  const [expandedReceipt, setExpandedReceipt] = useState<string | null>(null);
   const [toast, setToast] = useState('');
 
   const load = () => {
@@ -62,15 +122,6 @@ export default function StudentBookings() {
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(''), 3000);
-  };
-
-  const handleCancel = (bookingId: string) => {
-    const allBookings = getBookings();
-    const updated = allBookings.map(b => b.id === bookingId ? { ...b, status: 'cancelled' as const } : b);
-    saveBookings(updated);
-    load();
-    setCancelConfirm(null);
-    showToast('Pemesanan berhasil dibatalkan');
   };
 
   const getTrip = (tripId: string) => trips.find(t => t.id === tripId);
@@ -116,7 +167,7 @@ export default function StudentBookings() {
                 <div key={booking.id} className="card-binus">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <p className="font-bold text-foreground text-base">{trip.departure_time}</p>
+                      <p className="font-black text-foreground text-xl">{trip.departure_time}</p>
                       <p className="text-sm text-muted-foreground mt-0.5">{getDirectionLabel(trip.direction)}</p>
                       {trip.via_base && <span className="text-xs text-accent font-semibold">via BASE</span>}
                     </div>
@@ -125,10 +176,7 @@ export default function StudentBookings() {
 
                   <div className="flex items-center gap-3 text-sm mb-3">
                     <div className="flex items-center gap-1.5 bg-primary/8 rounded-lg px-3 py-1.5">
-                      <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="font-semibold text-primary">Kursi #{booking.seat_number}</span>
+                      <span className="font-semibold text-primary text-xs">💺 Kursi #{booking.seat_number}</span>
                     </div>
                     <div className="flex items-center gap-1.5 bg-muted rounded-lg px-3 py-1.5">
                       <span className="text-muted-foreground text-xs">
@@ -137,27 +185,21 @@ export default function StudentBookings() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setExpandedQR(expandedQR === booking.id ? null : booking.id)}
-                      className="flex-1 py-2 text-xs font-semibold rounded-xl border border-primary text-primary bg-primary/5 hover:bg-primary/10 transition-all"
-                    >
-                      {expandedQR === booking.id ? 'Tutup QR' : 'Tampilkan QR'}
-                    </button>
-                    {trip.status === 'waiting' && (
-                      <button
-                        onClick={() => setCancelConfirm(booking.id)}
-                        className="py-2 px-4 text-xs font-semibold rounded-xl border border-destructive/30 text-destructive bg-destructive/5 hover:bg-destructive/10 transition-all"
-                      >
-                        Batalkan
-                      </button>
-                    )}
-                  </div>
+                  <button
+                    onClick={() => setExpandedReceipt(expandedReceipt === booking.id ? null : booking.id)}
+                    className="w-full py-2 text-xs font-semibold rounded-xl border border-primary text-primary bg-primary/5 hover:bg-primary/10 transition-all"
+                  >
+                    {expandedReceipt === booking.id ? '✕ Tutup E-Tiket' : '🎫 Tampilkan E-Tiket'}
+                  </button>
 
-                  {expandedQR === booking.id && (
-                    <div className="mt-3">
-                      <QRPlaceholder bookingId={booking.id} />
-                    </div>
+                  {expandedReceipt === booking.id && (
+                    <BookingReceipt
+                      booking={booking}
+                      trip={trip}
+                      userName={user!.name}
+                      nim={user!.nim}
+                      faculty={user!.faculty}
+                    />
                   )}
                 </div>
               );
@@ -185,20 +227,6 @@ export default function StudentBookings() {
                 </div>
               );
             })}
-          </div>
-        </div>
-      )}
-
-      {/* Cancel Confirm Modal */}
-      {cancelConfirm && (
-        <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center p-4 bg-foreground/20 backdrop-blur-sm">
-          <div className="bg-card rounded-2xl p-6 w-full max-w-sm animate-slide-up">
-            <h3 className="font-bold text-foreground text-lg mb-2">Batalkan Pemesanan?</h3>
-            <p className="text-muted-foreground text-sm mb-4">Kursi yang dibatalkan tidak dapat dikembalikan.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setCancelConfirm(null)} className="flex-1 py-2.5 rounded-xl border border-border text-foreground text-sm font-semibold">Tidak</button>
-              <button onClick={() => handleCancel(cancelConfirm)} className="flex-1 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-semibold">Ya, Batalkan</button>
-            </div>
           </div>
         </div>
       )}

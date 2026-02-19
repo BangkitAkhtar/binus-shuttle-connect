@@ -13,6 +13,8 @@ export interface User {
   role: Role;
   faculty?: string;
   assigned_trip_id?: string;
+  password?: string;
+  bus_unit?: string;
 }
 
 export interface Trip {
