@@ -65,6 +65,10 @@ export const initialBookings: Booking[] = [
   },
 ];
 
+// Schema version - increment to auto-reset localStorage on schema changes
+const SCHEMA_VERSION = '3';
+const SCHEMA_KEY = 'binus_schema_version';
+
 // Storage keys
 const STORAGE_KEYS = {
   users: 'binus_users',
@@ -75,6 +79,11 @@ const STORAGE_KEYS = {
 };
 
 function initStorage() {
+  // Auto-reset if schema version changed
+  if (localStorage.getItem(SCHEMA_KEY) !== SCHEMA_VERSION) {
+    Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
+    localStorage.setItem(SCHEMA_KEY, SCHEMA_VERSION);
+  }
   if (!localStorage.getItem(STORAGE_KEYS.users)) {
     localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(mockUsers));
   }
