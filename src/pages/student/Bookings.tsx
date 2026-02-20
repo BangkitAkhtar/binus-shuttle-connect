@@ -75,7 +75,7 @@ function BookingReceipt({ booking, trip, userName, nim, faculty }: {
           <div>
             <p className="text-muted-foreground font-medium">Rute Perjalanan</p>
             <p className="font-bold text-primary">{getDirectionLabel(trip.direction)}</p>
-            {trip.via_base && <span className="text-[10px] text-accent font-semibold">via BASE</span>}
+            {trip.via_base && <span className="text-[10px] text-accent font-semibold">via Binus Square</span>}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -169,7 +169,7 @@ export default function StudentBookings() {
                     <div>
                       <p className="font-black text-foreground text-xl">{trip.departure_time}</p>
                       <p className="text-sm text-muted-foreground mt-0.5">{getDirectionLabel(trip.direction)}</p>
-                      {trip.via_base && <span className="text-xs text-accent font-semibold">via BASE</span>}
+                      {trip.via_base && <span className="text-xs text-accent font-semibold">via Binus Square</span>}
                     </div>
                     <StatusBadge status={booking.status} />
                   </div>

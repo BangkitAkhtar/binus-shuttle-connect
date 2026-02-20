@@ -57,7 +57,7 @@ function BookingReceipt({ booking, trip, user: student }: { booking: Booking; tr
           <div>
             <p className="text-muted-foreground font-medium">Rute Perjalanan</p>
             <p className="font-bold text-primary">{getDirectionLabel(trip.direction)}</p>
-            {trip.via_base && <span className="text-[10px] text-accent font-semibold">via BASE</span>}
+            {trip.via_base && <span className="text-[10px] text-accent font-semibold">via Binus Square</span>}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -90,20 +90,99 @@ function BookingReceipt({ booking, trip, user: student }: { booking: Booking; tr
   );
 }
 
+function SeatPicker({
+  totalSeats,
+  occupiedSeats,
+  selectedSeat,
+  onSelect,
+}: {
+  totalSeats: number;
+  occupiedSeats: number[];
+  selectedSeat: number | null;
+  onSelect: (seat: number) => void;
+}) {
+  const cols = 4; // 2 seats | aisle | 2 seats
+  const rows = Math.ceil(totalSeats / cols);
+
+  return (
+    <div className="mt-1 mb-2">
+      <p className="text-xs font-semibold text-foreground mb-2">Pilih Kursi:</p>
+      {/* Legend */}
+      <div className="flex gap-3 mb-3 justify-center">
+        {[
+          { color: 'bg-muted border-border', label: 'Tersedia' },
+          { color: 'bg-primary border-primary', label: 'Dipilih' },
+          { color: 'bg-destructive/20 border-destructive/30', label: 'Terisi' },
+        ].map(l => (
+          <div key={l.label} className="flex items-center gap-1.5">
+            <div className={`w-4 h-4 rounded-md border ${l.color}`} />
+            <span className="text-[10px] text-muted-foreground">{l.label}</span>
+          </div>
+        ))}
+      </div>
+      {/* Bus front indicator */}
+      <div className="flex justify-center mb-2">
+        <div className="bg-muted text-muted-foreground text-[10px] font-semibold px-4 py-1 rounded-t-xl border border-b-0 border-border">
+          🚌 Depan Bus
+        </div>
+      </div>
+      {/* Seat grid */}
+      <div className="bg-muted/30 border border-border rounded-xl p-3">
+        <div className="space-y-1.5">
+          {Array.from({ length: rows }, (_, row) => (
+            <div key={row} className="flex items-center justify-center gap-1">
+              {Array.from({ length: cols }, (_, col) => {
+                const seatNum = row * cols + col + 1;
+                if (seatNum > totalSeats) return <div key={col} className="w-9 h-9" />;
+                const isOccupied = occupiedSeats.includes(seatNum);
+                const isSelected = selectedSeat === seatNum;
+                const isAisle = col === 1; // gap after 2nd seat
+
+                return (
+                  <div key={col} className={`flex items-center ${isAisle ? 'mr-3' : ''}`}>
+                    <button
+                      type="button"
+                      disabled={isOccupied}
+                      onClick={() => onSelect(seatNum)}
+                      className={`w-9 h-9 rounded-lg text-[11px] font-bold border-2 transition-all flex items-center justify-center ${
+                        isOccupied
+                          ? 'bg-destructive/15 border-destructive/30 text-destructive/50 cursor-not-allowed'
+                          : isSelected
+                          ? 'bg-primary border-primary text-primary-foreground scale-110 shadow-md'
+                          : 'bg-card border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                      }`}
+                    >
+                      {isOccupied ? '✕' : seatNum}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BookingConfirmModal({
   trip,
+  occupiedSeats,
   onConfirm,
   onCancel,
   isLoading,
 }: {
   trip: Trip;
-  onConfirm: () => void;
+  occupiedSeats: number[];
+  onConfirm: (seatNumber: number) => void;
   onCancel: () => void;
   isLoading: boolean;
 }) {
+  const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center p-4 bg-foreground/30 backdrop-blur-sm">
-      <div className="bg-card rounded-2xl w-full max-w-sm animate-slide-up shadow-2xl">
+      <div className="bg-card rounded-2xl w-full max-w-sm animate-slide-up shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="p-5 border-b border-border">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
@@ -112,7 +191,7 @@ function BookingConfirmModal({
             </svg>
           </div>
           <h3 className="font-bold text-foreground text-lg">Konfirmasi Pemesanan</h3>
-          <p className="text-muted-foreground text-sm mt-1">Pastikan jadwal sudah sesuai sebelum memesan</p>
+          <p className="text-muted-foreground text-sm mt-1">Pilih kursi dan konfirmasi pesanan Anda</p>
         </div>
 
         {/* Detail trip */}
@@ -129,10 +208,24 @@ function BookingConfirmModal({
             {trip.via_base && (
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Keterangan</span>
-                <span className="text-accent font-semibold text-xs">via BASE</span>
+                <span className="text-accent font-semibold text-xs">via Binus Square</span>
               </div>
             )}
           </div>
+
+          {/* Seat Picker */}
+          <SeatPicker
+            totalSeats={trip.seat_capacity}
+            occupiedSeats={occupiedSeats}
+            selectedSeat={selectedSeat}
+            onSelect={setSelectedSeat}
+          />
+
+          {selectedSeat && (
+            <div className="bg-success/10 border border-success/30 rounded-xl px-3 py-2 text-center">
+              <p className="text-success font-bold text-sm">💺 Kursi #{selectedSeat} dipilih</p>
+            </div>
+          )}
 
           {/* Disclaimer */}
           <div className="bg-warning/10 border border-warning/30 rounded-xl p-3 flex gap-2.5">
@@ -158,16 +251,20 @@ function BookingConfirmModal({
             Batal
           </button>
           <button
-            onClick={onConfirm}
-            disabled={isLoading}
-            className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2"
+            onClick={() => selectedSeat && onConfirm(selectedSeat)}
+            disabled={isLoading || !selectedSeat}
+            className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+              !selectedSeat
+                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                : 'bg-primary text-primary-foreground hover:opacity-90'
+            }`}
           >
             {isLoading ? (
               <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-            ) : '✓'} Ya, Pesan Sekarang
+            ) : '✓'} {selectedSeat ? 'Ya, Pesan Sekarang' : 'Pilih Kursi Dulu'}
           </button>
         </div>
       </div>
@@ -201,7 +298,7 @@ export default function StudentSchedule() {
     setTimeout(() => setToast(''), 3000);
   };
 
-  const handleConfirmBook = async () => {
+  const handleConfirmBook = async (seatNumber: number) => {
     if (!confirmTrip) return;
     const allBookings = getBookings();
     const tripBookings = allBookings.filter(b => b.trip_id === confirmTrip.id && b.status !== 'cancelled');
@@ -214,12 +311,11 @@ export default function StudentSchedule() {
     setLoading(true);
     await new Promise(r => setTimeout(r, 500));
 
-    const nextSeat = Math.max(0, ...tripBookings.map(b => b.seat_number)) + 1;
     const newBooking: Booking = {
       id: `b-${Date.now()}`,
       user_id: user!.id,
       trip_id: confirmTrip.id,
-      seat_number: nextSeat,
+      seat_number: seatNumber,
       status: 'booked',
       created_at: new Date().toISOString(),
     };
@@ -268,6 +364,7 @@ export default function StudentSchedule() {
       {confirmTrip && (
         <BookingConfirmModal
           trip={confirmTrip}
+          occupiedSeats={bookings.filter(b => b.trip_id === confirmTrip.id && b.status !== 'cancelled').map(b => b.seat_number)}
           onConfirm={handleConfirmBook}
           onCancel={() => setConfirmTrip(null)}
           isLoading={loading}
@@ -368,7 +465,7 @@ export default function StudentSchedule() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap mb-1">
                           {entry.via_base && (
-                            <span className="text-[10px] bg-accent/10 text-accent font-bold px-1.5 py-0.5 rounded-md">via BASE</span>
+                            <span className="text-[10px] bg-accent/10 text-accent font-bold px-1.5 py-0.5 rounded-md">via Binus Square</span>
                           )}
                           {isBooked && booking && (
                             <span className="text-[10px] bg-success/10 text-success font-bold px-1.5 py-0.5 rounded-md">✓ Kursi #{booking.seat_number}</span>

@@ -132,7 +132,7 @@ export default function AdminDashboard() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-semibold text-foreground">{getDirectionLabel(trip.direction)}</p>
                       {trip.via_base && (
-                        <span className="text-[10px] bg-accent/10 text-accent font-bold px-1.5 py-0.5 rounded-md">via BASE</span>
+                        <span className="text-[10px] bg-accent/10 text-accent font-bold px-1.5 py-0.5 rounded-md">via Binus Square</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">

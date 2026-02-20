@@ -8,15 +8,15 @@ export const mockUsers: User[] = [
   { id: 'u1', name: 'Andi Pratama', nim: '2501234567', role: 'student', faculty: 'School of Computer Science', password: 'binus123' },
   { id: 'u2', name: 'Sari Dewi', nim: '2501234568', role: 'student', faculty: 'School of Business Management', password: 'binus123' },
   { id: 'u3', name: 'Budi Santoso', nim: '2501234569', role: 'student', faculty: 'School of Design', password: 'binus123' },
-  { id: 'u4', name: 'Ahmad Fauzi', driver_id: 'DRV001', role: 'driver', assigned_trip_id: `${todayStr}-ang-1`, password: 'driver123', bus_unit: 'B 1234 ABC' },
-  { id: 'u5', name: 'Hendra Kusuma', driver_id: 'DRV002', role: 'driver', assigned_trip_id: `${todayStr}-as-0`, password: 'driver123', bus_unit: 'B 5678 DEF' },
+  { id: 'u4', name: 'Angga Saputra', driver_id: 'DRV001', role: 'driver', password: 'driver123', bus_unit: 'B 1234 ABC' },
+  { id: 'u5', name: 'Hendra Kusuma', driver_id: 'DRV002', role: 'driver', password: 'driver123', bus_unit: 'B 5678 DEF' },
   { id: 'u6', name: 'Super Admin', admin_id: 'ADM001', role: 'admin', password: 'admin123' },
 ];
 
 export const initialTrips: Trip[] = generateTripsForDay(today);
 
 // Update some trip statuses for realism
-initialTrips.forEach((t, i) => {
+initialTrips.forEach((t) => {
   const [h, m] = t.departure_time.split(':').map(Number);
   const tripMinutes = h * 60 + m;
   const nowMinutes = today.getHours() * 60 + today.getMinutes();
@@ -25,11 +25,22 @@ initialTrips.forEach((t, i) => {
   else if (tripMinutes < nowMinutes) t.status = 'otw';
 });
 
-// Assign drivers to first 2 trips
-if (initialTrips[0]) initialTrips[0].driver_id = 'u4';
-if (initialTrips.find(t => t.direction === 'as_to_anggrek')) {
-  const t = initialTrips.find(t => t.direction === 'as_to_anggrek')!;
-  t.driver_id = 'u5';
+// Assign Angga (u4) to the next waiting trip so driver can test status flow
+const anggaTrip = initialTrips.find(t => t.status === 'waiting' && t.direction === 'anggrek_to_as')
+  || initialTrips.find(t => t.status === 'waiting');
+if (anggaTrip) {
+  anggaTrip.driver_id = 'u4';
+  anggaTrip.status = 'waiting'; // ensure it's waiting
+  // Also update Angga's assigned_trip_id
+  mockUsers.find(u => u.id === 'u4')!.assigned_trip_id = anggaTrip.id;
+}
+
+// Assign Hendra to a different trip
+const hendraTrip = initialTrips.find(t => t.status === 'waiting' && t.direction === 'as_to_anggrek' && t.id !== anggaTrip?.id)
+  || initialTrips.find(t => t.id !== anggaTrip?.id && t.status !== 'completed');
+if (hendraTrip) {
+  hendraTrip.driver_id = 'u5';
+  mockUsers.find(u => u.id === 'u5')!.assigned_trip_id = hendraTrip.id;
 }
 
 export const initialBookings: Booking[] = [
