@@ -56,7 +56,7 @@ export default function StudentDashboard() {
   const [nextTripBookings, setNextTripBookings] = useState(0);
   const [busUnits, setBusUnits] = useState<BusUnit[]>([]);
 
-  useEffect(() => {
+  const loadData = () => {
     const allTrips = getTrips();
     setTrips(allTrips);
     setBusUnits(getBusUnits());
@@ -78,6 +78,14 @@ export default function StudentDashboard() {
       const allBookings = getBookings();
       setNextTripBookings(allBookings.filter(b => b.trip_id === next.id && b.status !== 'cancelled').length);
     }
+  };
+
+  useEffect(() => { loadData(); }, [user]);
+
+  // Poll for driver status updates every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(loadData, 3000);
+    return () => clearInterval(interval);
   }, [user]);
 
   const getBusUnit = (id?: string) => busUnits.find(b => b.id === id);

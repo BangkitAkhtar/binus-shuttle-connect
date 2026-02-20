@@ -121,6 +121,14 @@ export default function StudentBookings() {
 
   useEffect(() => { load(); }, [user]);
 
+  // Poll for trip status updates from driver every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTrips(getTrips());
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   const getBusUnit = (id?: string) => busUnits.find(b => b.id === id);
 
   const showToast = (msg: string) => {
