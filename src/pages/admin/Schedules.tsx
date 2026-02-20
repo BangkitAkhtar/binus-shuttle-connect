@@ -119,7 +119,7 @@ export default function AdminSchedules() {
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <span className="text-xs text-muted-foreground">{getDayTypeLabel(trip.day_type)}</span>
                 <span className="text-xs text-muted-foreground">· {trip.seat_capacity} kursi</span>
-                {trip.via_base && <span className="text-xs text-accent font-semibold">via BASE</span>}
+                {trip.via_base && <span className="text-xs text-accent font-semibold">via Binus Square</span>}
               </div>
             </div>
             <div className="flex gap-1">
@@ -176,7 +176,7 @@ export default function AdminSchedules() {
               </div>
               <div className="flex items-center gap-3 py-2">
                 <input type="checkbox" id="via_base" checked={form.via_base} onChange={e => setForm(f => ({ ...f, via_base: e.target.checked }))} className="w-4 h-4 rounded" />
-                <label htmlFor="via_base" className="text-sm font-medium text-foreground">Melewati BASE</label>
+                <label htmlFor="via_base" className="text-sm font-medium text-foreground">Melewati Binus Square</label>
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => { setShowForm(false); setEditId(null); }} className="flex-1 py-2.5 rounded-xl border border-border text-foreground text-sm font-semibold">Batal</button>

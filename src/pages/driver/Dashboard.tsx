@@ -115,7 +115,7 @@ export default function DriverDashboard() {
                 <p className="text-4xl font-black mt-0.5">{trip.departure_time}</p>
                 <p className="text-sm opacity-80 mt-1">{getDirectionLabel(trip.direction)}</p>
                 {trip.via_base && (
-                  <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1 inline-block">via BASE</span>
+                  <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1 inline-block">via Binus Square</span>
                 )}
               </div>
               <StatusBadge status={trip.status} />

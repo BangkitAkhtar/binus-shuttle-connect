@@ -115,7 +115,7 @@ export default function StudentDashboard() {
               <p className="text-xs opacity-70 mb-0.5">Rute</p>
               <p className="text-sm font-semibold">{getDirectionLabel(nextTrip.direction)}</p>
               {nextTrip.via_base && (
-                <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1 inline-block">via BASE</span>
+                <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1 inline-block">via Binus Square</span>
               )}
             </div>
             <div className="text-right">
@@ -172,7 +172,7 @@ export default function StudentDashboard() {
                     <div>
                       <p className="text-sm font-semibold text-foreground">{getDirectionLabel(trip.direction)}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        {trip.via_base && <span className="text-xs text-accent font-medium">via BASE</span>}
+                        {trip.via_base && <span className="text-xs text-accent font-medium">via Binus Square</span>}
                         <span className="text-xs text-muted-foreground">{trip.seat_capacity - booked} kursi</span>
                       </div>
                     </div>
