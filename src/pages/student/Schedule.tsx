@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { getTrips, getBookingsForUser, getBookings, getUsers, saveBookings, getBusUnits } from '../../data/mockData';
+import { Trip, Booking, User, BusUnit } from '../../types';
 import { DayType } from '../../types';
 import { scheduleData, getDayType, getDirectionLabel } from '../../data/schedules';
-import { getTrips, getBookings, getBookingsForUser, saveBookings, getUsers } from '../../data/mockData';
-import { useAuth } from '../../context/AuthContext';
-import { Trip, Booking, User } from '../../types';
 
 const dayTabs: { key: DayType; label: string; short: string }[] = [
   { key: 'senin_kamis', label: 'Senin – Kamis', short: 'Sen–Kam' },
@@ -11,28 +11,24 @@ const dayTabs: { key: DayType; label: string; short: string }[] = [
   { key: 'sabtu', label: 'Sabtu', short: 'Sabtu' },
 ];
 
-function BookingReceipt({ booking, trip, user: student }: { booking: Booking; trip: Trip; user: User }) {
+function BookingReceipt({ booking, trip, user: student, busUnit }: { booking: Booking; trip: Trip; user: User; busUnit?: BusUnit }) {
   const dateStr = new Date(booking.created_at).toLocaleDateString('id-ID', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   });
   const timeStr = new Date(booking.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const capacity = busUnit?.seat_capacity || 20;
 
   return (
     <div className="mt-3 rounded-2xl border-2 border-dashed border-primary/30 overflow-hidden">
-      {/* Header struk */}
       <div className="bg-primary px-4 py-3 text-center">
         <p className="text-primary-foreground font-black text-sm tracking-widest uppercase">🎫 BINUS Shuttle</p>
         <p className="text-primary-foreground/70 text-xs">E-Tiket Perjalanan</p>
       </div>
-
-      {/* Divider garis putus-putus */}
       <div className="relative flex items-center">
         <div className="w-4 h-4 rounded-full bg-background border-2 border-dashed border-primary/30 absolute -left-2" />
         <div className="flex-1 border-t-2 border-dashed border-primary/20 mx-2" />
         <div className="w-4 h-4 rounded-full bg-background border-2 border-dashed border-primary/30 absolute -right-2" />
       </div>
-
-      {/* Body struk */}
       <div className="bg-muted/30 px-4 py-3 space-y-2.5">
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div>
@@ -52,12 +48,11 @@ function BookingReceipt({ booking, trip, user: student }: { booking: Booking; tr
             <p className="font-bold text-foreground">#{booking.seat_number}</p>
           </div>
         </div>
-
         <div className="border-t border-dashed border-border pt-2.5 space-y-1.5 text-xs">
           <div>
             <p className="text-muted-foreground font-medium">Rute Perjalanan</p>
             <p className="font-bold text-primary">{getDirectionLabel(trip.direction)}</p>
-            {trip.via_base && <span className="text-[10px] text-accent font-semibold">via Binus Square</span>}
+            {trip.via_binus_square && <span className="text-[10px] text-accent font-semibold">via Binus Square</span>}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -65,19 +60,16 @@ function BookingReceipt({ booking, trip, user: student }: { booking: Booking; tr
               <p className="font-black text-foreground text-base">{trip.departure_time}</p>
             </div>
             <div>
-              <p className="text-muted-foreground font-medium">Kapasitas Bus</p>
-              <p className="font-bold text-foreground">20 Kursi</p>
+              <p className="text-muted-foreground font-medium">Unit Bus</p>
+              <p className="font-bold text-foreground">{busUnit?.plate_number || '—'} ({capacity} Kursi)</p>
             </div>
           </div>
         </div>
-
         <div className="border-t border-dashed border-border pt-2.5 text-xs text-muted-foreground">
           <p>Dipesan: {dateStr} · {timeStr}</p>
           <p className="font-mono text-[10px] mt-1 text-muted-foreground/60">ID: {booking.id.slice(-12).toUpperCase()}</p>
         </div>
       </div>
-
-      {/* Footer struk */}
       <div className="relative flex items-center">
         <div className="w-4 h-4 rounded-full bg-background border-2 border-dashed border-primary/30 absolute -left-2" />
         <div className="flex-1 border-t-2 border-dashed border-primary/20 mx-2" />
@@ -101,13 +93,12 @@ function SeatPicker({
   selectedSeat: number | null;
   onSelect: (seat: number) => void;
 }) {
-  const cols = 4; // 2 seats | aisle | 2 seats
+  const cols = 4;
   const rows = Math.ceil(totalSeats / cols);
 
   return (
     <div className="mt-1 mb-2">
       <p className="text-xs font-semibold text-foreground mb-2">Pilih Kursi:</p>
-      {/* Legend */}
       <div className="flex gap-3 mb-3 justify-center">
         {[
           { color: 'bg-muted border-border', label: 'Tersedia' },
@@ -120,13 +111,11 @@ function SeatPicker({
           </div>
         ))}
       </div>
-      {/* Bus front indicator */}
       <div className="flex justify-center mb-2">
         <div className="bg-muted text-muted-foreground text-[10px] font-semibold px-4 py-1 rounded-t-xl border border-b-0 border-border">
           🚌 Depan Bus
         </div>
       </div>
-      {/* Seat grid */}
       <div className="bg-muted/30 border border-border rounded-xl p-3">
         <div className="space-y-1.5">
           {Array.from({ length: rows }, (_, row) => (
@@ -136,7 +125,7 @@ function SeatPicker({
                 if (seatNum > totalSeats) return <div key={col} className="w-9 h-9" />;
                 const isOccupied = occupiedSeats.includes(seatNum);
                 const isSelected = selectedSeat === seatNum;
-                const isAisle = col === 1; // gap after 2nd seat
+                const isAisle = col === 1;
 
                 return (
                   <div key={col} className={`flex items-center ${isAisle ? 'mr-3' : ''}`}>
@@ -167,23 +156,25 @@ function SeatPicker({
 
 function BookingConfirmModal({
   trip,
+  busUnit,
   occupiedSeats,
   onConfirm,
   onCancel,
   isLoading,
 }: {
   trip: Trip;
+  busUnit?: BusUnit;
   occupiedSeats: number[];
   onConfirm: (seatNumber: number) => void;
   onCancel: () => void;
   isLoading: boolean;
 }) {
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
+  const capacity = busUnit?.seat_capacity || 20;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center p-4 bg-foreground/30 backdrop-blur-sm">
       <div className="bg-card rounded-2xl w-full max-w-sm animate-slide-up shadow-2xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="p-5 border-b border-border">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
             <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,7 +185,6 @@ function BookingConfirmModal({
           <p className="text-muted-foreground text-sm mt-1">Pilih kursi dan konfirmasi pesanan Anda</p>
         </div>
 
-        {/* Detail trip */}
         <div className="p-5 space-y-3">
           <div className="bg-muted rounded-xl p-4 space-y-2">
             <div className="flex justify-between items-center text-sm">
@@ -205,17 +195,22 @@ function BookingConfirmModal({
               <span className="text-muted-foreground">Jam Berangkat</span>
               <span className="font-black text-primary text-base">{trip.departure_time}</span>
             </div>
-            {trip.via_base && (
+            {trip.via_binus_square && (
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Keterangan</span>
                 <span className="text-accent font-semibold text-xs">via Binus Square</span>
               </div>
             )}
+            {busUnit && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Unit Bus</span>
+                <span className="font-semibold text-foreground text-xs">{busUnit.plate_number}</span>
+              </div>
+            )}
           </div>
 
-          {/* Seat Picker */}
           <SeatPicker
-            totalSeats={trip.seat_capacity}
+            totalSeats={capacity}
             occupiedSeats={occupiedSeats}
             selectedSeat={selectedSeat}
             onSelect={setSelectedSeat}
@@ -227,7 +222,6 @@ function BookingConfirmModal({
             </div>
           )}
 
-          {/* Disclaimer */}
           <div className="bg-warning/10 border border-warning/30 rounded-xl p-3 flex gap-2.5">
             <svg className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -241,22 +235,15 @@ function BookingConfirmModal({
           </div>
         </div>
 
-        {/* Buttons */}
         <div className="px-5 pb-5 flex gap-3">
-          <button
-            onClick={onCancel}
-            disabled={isLoading}
-            className="flex-1 py-3 rounded-xl border border-border text-foreground text-sm font-semibold hover:bg-muted transition-all"
-          >
+          <button onClick={onCancel} disabled={isLoading} className="flex-1 py-3 rounded-xl border border-border text-foreground text-sm font-semibold hover:bg-muted transition-all">
             Batal
           </button>
           <button
             onClick={() => selectedSeat && onConfirm(selectedSeat)}
             disabled={isLoading || !selectedSeat}
             className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-              !selectedSeat
-                ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                : 'bg-primary text-primary-foreground hover:opacity-90'
+              !selectedSeat ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-primary text-primary-foreground hover:opacity-90'
             }`}
           >
             {isLoading ? (
@@ -284,10 +271,12 @@ export default function StudentSchedule() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [busUnits, setBusUnits] = useState<BusUnit[]>([]);
 
   useEffect(() => {
     setTrips(getTrips());
     setAllUsers(getUsers());
+    setBusUnits(getBusUnits());
     const userBookings = getBookingsForUser(user!.id);
     setBooked(userBookings.map(b => b.trip_id));
     setBookings(getBookings());
@@ -298,11 +287,14 @@ export default function StudentSchedule() {
     setTimeout(() => setToast(''), 3000);
   };
 
+  const getBusUnit = (busUnitId?: string) => busUnits.find(b => b.id === busUnitId);
+
   const handleConfirmBook = async (seatNumber: number) => {
     if (!confirmTrip) return;
     const allBookings = getBookings();
     const tripBookings = allBookings.filter(b => b.trip_id === confirmTrip.id && b.status !== 'cancelled');
-    if (tripBookings.length >= confirmTrip.seat_capacity) {
+    const capacity = getBusUnit(confirmTrip.bus_unit_id)?.seat_capacity || 20;
+    if (tripBookings.length >= capacity) {
       showToast('Maaf, kursi penuh!');
       setConfirmTrip(null);
       return;
@@ -347,8 +339,6 @@ export default function StudentSchedule() {
   };
 
   const schedule = scheduleData[activeDay];
-
-  // Determine today's day type for visual indicator
   const todayDayType = getDayType(today);
   const todayDateStr = today.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   const todayDayStr = today.toLocaleDateString('id-ID', { weekday: 'long' });
@@ -364,6 +354,7 @@ export default function StudentSchedule() {
       {confirmTrip && (
         <BookingConfirmModal
           trip={confirmTrip}
+          busUnit={getBusUnit(confirmTrip.bus_unit_id)}
           occupiedSeats={bookings.filter(b => b.trip_id === confirmTrip.id && b.status !== 'cancelled').map(b => b.seat_number)}
           onConfirm={handleConfirmBook}
           onCancel={() => setConfirmTrip(null)}
@@ -447,24 +438,25 @@ export default function StudentSchedule() {
                 const isBooked = trip ? booked.includes(trip.id) : false;
                 const booking = trip ? getUserBookingForTrip(trip.id) : undefined;
                 const bookedCount = trip ? getTripBookingCount(trip.id) : 0;
-                const isFull = trip ? bookedCount >= trip.seat_capacity : false;
+                const tripBusUnit = trip ? getBusUnit(trip.bus_unit_id) : undefined;
+                const capacity = tripBusUnit?.seat_capacity || 20;
+                const isFull = trip ? bookedCount >= capacity : false;
                 const isCompleted = trip?.status === 'completed';
                 const driver = trip ? getDriverForTrip(trip.id) : undefined;
-                const availableSeats = trip ? trip.seat_capacity - bookedCount : 20;
+                const driverBusUnit = driver?.bus_unit_id ? getBusUnit(driver.bus_unit_id) : undefined;
+                const availableSeats = trip ? capacity - bookedCount : 20;
 
                 return (
                   <div key={i} className={`card-binus ${isCompleted ? 'opacity-50' : ''}`}>
                     <div className="flex items-center gap-3">
-                      {/* Jam */}
                       <div className={`text-center rounded-xl px-3 py-2.5 min-w-[64px] ${isBooked ? 'bg-success/10' : 'bg-primary/8'}`}>
                         <span className={`text-lg font-black ${isBooked ? 'text-success' : 'text-primary'}`}>{entry.time}</span>
                         <p className="text-[9px] text-muted-foreground mt-0.5">WIB</p>
                       </div>
 
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                          {entry.via_base && (
+                          {entry.via_binus_square && (
                             <span className="text-[10px] bg-accent/10 text-accent font-bold px-1.5 py-0.5 rounded-md">via Binus Square</span>
                           )}
                           {isBooked && booking && (
@@ -474,19 +466,18 @@ export default function StudentSchedule() {
                         {driver ? (
                           <p className="text-xs text-muted-foreground">
                             🚌 {driver.name}
-                            {driver.bus_unit && <span className="ml-1 font-mono text-[10px]">({driver.bus_unit})</span>}
+                            {driverBusUnit && <span className="ml-1 font-mono text-[10px]">({driverBusUnit.plate_number})</span>}
                           </p>
                         ) : (
                           <p className="text-xs text-muted-foreground">Driver belum ditugaskan</p>
                         )}
                         {trip && !isCompleted && (
                           <p className={`text-[10px] mt-0.5 font-medium ${isFull ? 'text-destructive' : availableSeats <= 5 ? 'text-warning' : 'text-muted-foreground'}`}>
-                            {isFull ? '🔴 Kursi penuh' : `🟢 ${availableSeats}/${trip.seat_capacity} kursi tersedia`}
+                            {isFull ? '🔴 Kursi penuh' : `🟢 ${availableSeats}/${capacity} kursi tersedia`}
                           </p>
                         )}
                       </div>
 
-                      {/* Action */}
                       <div className="flex-shrink-0">
                         {isBooked && booking ? (
                           <button
@@ -511,9 +502,8 @@ export default function StudentSchedule() {
                       </div>
                     </div>
 
-                    {/* E-Tiket / Struk */}
                     {showReceipt === booking?.id && booking && trip && (
-                      <BookingReceipt booking={booking} trip={trip} user={user!} />
+                      <BookingReceipt booking={booking} trip={trip} user={user!} busUnit={tripBusUnit} />
                     )}
                   </div>
                 );

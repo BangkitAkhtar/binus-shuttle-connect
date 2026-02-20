@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getTrips, getBookingsForUser, getBookings, getUsers, saveTrips } from '../../data/mockData';
-import { Trip, Booking } from '../../types';
+import { getTrips, getBookingsForUser, getBookings, getUsers, getBusUnits } from '../../data/mockData';
+import { Trip, Booking, BusUnit } from '../../types';
 import { getDirectionLabel, getDayType } from '../../data/schedules';
 
 function getStatusLabel(status: string) {
@@ -54,10 +54,12 @@ export default function StudentDashboard() {
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [nextTrip, setNextTrip] = useState<Trip | null>(null);
   const [nextTripBookings, setNextTripBookings] = useState(0);
+  const [busUnits, setBusUnits] = useState<BusUnit[]>([]);
 
   useEffect(() => {
     const allTrips = getTrips();
     setTrips(allTrips);
+    setBusUnits(getBusUnits());
     const bookings = getBookingsForUser(user!.id);
     setUserBookings(bookings);
 
@@ -78,15 +80,18 @@ export default function StudentDashboard() {
     }
   }, [user]);
 
+  const getBusUnit = (id?: string) => busUnits.find(b => b.id === id);
+
   const dayType = getDayType(new Date());
   const dayLabel: Record<string, string> = { senin_kamis: 'Senin–Kamis', jumat: 'Jumat', sabtu: 'Sabtu' };
 
   const todayTrips = trips.filter(t => t.status !== 'completed').length;
   const bookedCount = userBookings.length;
+  const nextBusUnit = nextTrip ? getBusUnit(nextTrip.bus_unit_id) : undefined;
+  const nextCapacity = nextBusUnit?.seat_capacity || 20;
 
   return (
     <div className="page-container max-w-2xl mx-auto animate-fade-in">
-      {/* Greeting */}
       <div className="mb-5">
         <p className="text-muted-foreground text-sm">Selamat datang,</p>
         <h1 className="text-2xl font-bold text-foreground">{user?.name} 👋</h1>
@@ -95,7 +100,6 @@ export default function StudentDashboard() {
         </p>
       </div>
 
-      {/* Next Shuttle Card */}
       {nextTrip ? (
         <div className="card-primary mb-5 animate-slide-up">
           <div className="flex items-center justify-between mb-3">
@@ -114,13 +118,13 @@ export default function StudentDashboard() {
             <div>
               <p className="text-xs opacity-70 mb-0.5">Rute</p>
               <p className="text-sm font-semibold">{getDirectionLabel(nextTrip.direction)}</p>
-              {nextTrip.via_base && (
+              {nextTrip.via_binus_square && (
                 <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1 inline-block">via Binus Square</span>
               )}
             </div>
             <div className="text-right">
               <p className="text-xs opacity-70 mb-0.5">Kursi Tersedia</p>
-              <p className="text-sm font-bold">{nextTrip.seat_capacity - nextTripBookings}/{nextTrip.seat_capacity}</p>
+              <p className="text-sm font-bold">{nextCapacity - nextTripBookings}/{nextCapacity}</p>
             </div>
           </div>
         </div>
@@ -134,7 +138,6 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         {[
           { label: 'Trip Hari Ini', value: trips.length, icon: '🚌' },
@@ -149,7 +152,6 @@ export default function StudentDashboard() {
         ))}
       </div>
 
-      {/* Upcoming Trips */}
       <div className="mb-4">
         <h2 className="section-title">Jadwal Mendatang</h2>
         <div className="space-y-2">
@@ -163,6 +165,8 @@ export default function StudentDashboard() {
             .map(trip => {
               const allBookings = getBookings();
               const booked = allBookings.filter(b => b.trip_id === trip.id && b.status !== 'cancelled').length;
+              const tripBusUnit = getBusUnit(trip.bus_unit_id);
+              const capacity = tripBusUnit?.seat_capacity || 20;
               return (
                 <div key={trip.id} className="schedule-card">
                   <div className="flex items-center gap-3">
@@ -172,8 +176,8 @@ export default function StudentDashboard() {
                     <div>
                       <p className="text-sm font-semibold text-foreground">{getDirectionLabel(trip.direction)}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        {trip.via_base && <span className="text-xs text-accent font-medium">via Binus Square</span>}
-                        <span className="text-xs text-muted-foreground">{trip.seat_capacity - booked} kursi</span>
+                        {trip.via_binus_square && <span className="text-xs text-accent font-medium">via Binus Square</span>}
+                        <span className="text-xs text-muted-foreground">{capacity - booked} kursi</span>
                       </div>
                     </div>
                   </div>

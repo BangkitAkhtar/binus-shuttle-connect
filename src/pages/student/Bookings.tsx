@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getBookingsForUser, getTrips, saveBookings, getBookings } from '../../data/mockData';
-import { Booking, Trip } from '../../types';
+import { getBookingsForUser, getTrips, getBookings, getBusUnits } from '../../data/mockData';
+import { Booking, Trip, BusUnit } from '../../types';
 import { getDirectionLabel } from '../../data/schedules';
-import { useAuth as useAuthCtx } from '../../context/AuthContext';
 
 function getStatusLabel(status: string) {
   const map: Record<string, string> = {
@@ -29,12 +28,13 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function BookingReceipt({ booking, trip, userName, nim, faculty }: {
+function BookingReceipt({ booking, trip, userName, nim, faculty, busUnit }: {
   booking: Booking;
   trip: Trip;
   userName: string;
   nim?: string;
   faculty?: string;
+  busUnit?: BusUnit;
 }) {
   const dateStr = new Date(booking.created_at).toLocaleDateString('id-ID', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
@@ -75,7 +75,7 @@ function BookingReceipt({ booking, trip, userName, nim, faculty }: {
           <div>
             <p className="text-muted-foreground font-medium">Rute Perjalanan</p>
             <p className="font-bold text-primary">{getDirectionLabel(trip.direction)}</p>
-            {trip.via_base && <span className="text-[10px] text-accent font-semibold">via Binus Square</span>}
+            {trip.via_binus_square && <span className="text-[10px] text-accent font-semibold">via Binus Square</span>}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -83,8 +83,8 @@ function BookingReceipt({ booking, trip, userName, nim, faculty }: {
               <p className="font-black text-foreground text-base">{trip.departure_time}</p>
             </div>
             <div>
-              <p className="text-muted-foreground font-medium">Kapasitas Bus</p>
-              <p className="font-bold text-foreground">20 Kursi</p>
+              <p className="text-muted-foreground font-medium">Unit Bus</p>
+              <p className="font-bold text-foreground">{busUnit?.plate_number || '—'}</p>
             </div>
           </div>
         </div>
@@ -109,15 +109,19 @@ export default function StudentBookings() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [busUnits, setBusUnits] = useState<BusUnit[]>([]);
   const [expandedReceipt, setExpandedReceipt] = useState<string | null>(null);
   const [toast, setToast] = useState('');
 
   const load = () => {
     setBookings(getBookingsForUser(user!.id));
     setTrips(getTrips());
+    setBusUnits(getBusUnits());
   };
 
   useEffect(() => { load(); }, [user]);
+
+  const getBusUnit = (id?: string) => busUnits.find(b => b.id === id);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -149,7 +153,6 @@ export default function StudentBookings() {
         <p className="text-sm text-muted-foreground">Riwayat pemesanan shuttle</p>
       </div>
 
-      {/* Upcoming */}
       <div className="mb-5">
         <h2 className="section-title">Tiket Aktif</h2>
         {upcoming.length === 0 ? (
@@ -163,13 +166,15 @@ export default function StudentBookings() {
             {upcoming.map(booking => {
               const trip = getTrip(booking.trip_id);
               if (!trip) return null;
+              const tripBusUnit = getBusUnit(trip.bus_unit_id);
               return (
                 <div key={booking.id} className="card-binus">
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <p className="font-black text-foreground text-xl">{trip.departure_time}</p>
                       <p className="text-sm text-muted-foreground mt-0.5">{getDirectionLabel(trip.direction)}</p>
-                      {trip.via_base && <span className="text-xs text-accent font-semibold">via Binus Square</span>}
+                      {trip.via_binus_square && <span className="text-xs text-accent font-semibold">via Binus Square</span>}
+                      {tripBusUnit && <p className="text-[10px] text-muted-foreground mt-0.5">🚌 {tripBusUnit.plate_number}</p>}
                     </div>
                     <StatusBadge status={booking.status} />
                   </div>
@@ -185,6 +190,20 @@ export default function StudentBookings() {
                     </div>
                   </div>
 
+                  {/* Trip status indicator */}
+                  {trip.status !== 'waiting' && (
+                    <div className={`mb-3 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                      trip.status === 'arrived' ? 'bg-success/10 text-success border border-success/20' :
+                      trip.status === 'otw' ? 'bg-info/10 text-info border border-info/20' :
+                      'bg-muted text-muted-foreground'
+                    }`}>
+                      <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
+                      {trip.status === 'arrived' && '🛑 Bus sudah di shelter — segera menuju lokasi!'}
+                      {trip.status === 'otw' && '🚌 Bus sedang dalam perjalanan (OTW)'}
+                      {trip.status === 'completed' && '✅ Trip telah selesai'}
+                    </div>
+                  )}
+
                   <button
                     onClick={() => setExpandedReceipt(expandedReceipt === booking.id ? null : booking.id)}
                     className="w-full py-2 text-xs font-semibold rounded-xl border border-primary text-primary bg-primary/5 hover:bg-primary/10 transition-all"
@@ -199,6 +218,7 @@ export default function StudentBookings() {
                       userName={user!.name}
                       nim={user!.nim}
                       faculty={user!.faculty}
+                      busUnit={tripBusUnit}
                     />
                   )}
                 </div>
@@ -208,7 +228,6 @@ export default function StudentBookings() {
         )}
       </div>
 
-      {/* Past */}
       {past.length > 0 && (
         <div>
           <h2 className="section-title">Riwayat</h2>

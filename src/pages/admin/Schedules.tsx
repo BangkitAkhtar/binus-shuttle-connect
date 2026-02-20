@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getTrips, saveTrips } from '../../data/mockData';
-import { Trip, DayType, RouteDirection } from '../../types';
+import { getTrips, saveTrips, getBusUnits } from '../../data/mockData';
+import { Trip, DayType, RouteDirection, BusUnit } from '../../types';
 import { getDirectionLabel, getDayTypeLabel } from '../../data/schedules';
 
 const emptyForm = {
@@ -9,13 +9,14 @@ const emptyForm = {
   direction: 'anggrek_to_as' as RouteDirection,
   departure_time: '',
   day_type: 'senin_kamis' as DayType,
-  via_base: false,
-  seat_capacity: 20,
+  via_binus_square: false,
+  bus_unit_id: '',
   status: 'waiting' as const,
 };
 
 export default function AdminSchedules() {
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [busUnits, setBusUnits] = useState<BusUnit[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
@@ -23,9 +24,13 @@ export default function AdminSchedules() {
   const [filterDay, setFilterDay] = useState<DayType | 'all'>('all');
   const [toast, setToast] = useState('');
 
-  const load = () => setTrips(getTrips());
+  const load = () => {
+    setTrips(getTrips());
+    setBusUnits(getBusUnits());
+  };
   useEffect(() => { load(); }, []);
 
+  const getBusUnit = (id?: string) => busUnits.find(b => b.id === id);
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -58,8 +63,8 @@ export default function AdminSchedules() {
       direction: trip.direction,
       departure_time: trip.departure_time,
       day_type: trip.day_type,
-      via_base: trip.via_base,
-      seat_capacity: trip.seat_capacity,
+      via_binus_square: trip.via_binus_square,
+      bus_unit_id: trip.bus_unit_id || '',
       status: trip.status as any,
     });
     setEditId(trip.id);
@@ -98,7 +103,6 @@ export default function AdminSchedules() {
         </button>
       </div>
 
-      {/* Filter */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         <button onClick={() => setFilterDay('all')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${filterDay === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>Semua</button>
         {dayTypes.map(dt => (
@@ -109,33 +113,36 @@ export default function AdminSchedules() {
       </div>
 
       <div className="space-y-2">
-        {filtered.map(trip => (
-          <div key={trip.id} className="card-binus flex items-center gap-3">
-            <div className="bg-primary/10 rounded-xl px-3 py-2 text-center min-w-[60px]">
-              <span className="font-black text-primary text-sm">{trip.departure_time}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">{getDirectionLabel(trip.direction)}</p>
-              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                <span className="text-xs text-muted-foreground">{getDayTypeLabel(trip.day_type)}</span>
-                <span className="text-xs text-muted-foreground">· {trip.seat_capacity} kursi</span>
-                {trip.via_base && <span className="text-xs text-accent font-semibold">via Binus Square</span>}
+        {filtered.map(trip => {
+          const tripBusUnit = getBusUnit(trip.bus_unit_id);
+          return (
+            <div key={trip.id} className="card-binus flex items-center gap-3">
+              <div className="bg-primary/10 rounded-xl px-3 py-2 text-center min-w-[60px]">
+                <span className="font-black text-primary text-sm">{trip.departure_time}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground">{getDirectionLabel(trip.direction)}</p>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <span className="text-xs text-muted-foreground">{getDayTypeLabel(trip.day_type)}</span>
+                  {tripBusUnit && <span className="text-xs text-muted-foreground">· 🚌 {tripBusUnit.plate_number} ({tripBusUnit.seat_capacity} kursi)</span>}
+                  {trip.via_binus_square && <span className="text-xs text-accent font-semibold">via Binus Square</span>}
+                </div>
+              </div>
+              <div className="flex gap-1">
+                <button onClick={() => handleEdit(trip)} className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-all">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button onClick={() => setDeleteConfirm(trip.id)} className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive hover:bg-destructive/20 transition-all">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
               </div>
             </div>
-            <div className="flex gap-1">
-              <button onClick={() => handleEdit(trip)} className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-all">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-              <button onClick={() => setDeleteConfirm(trip.id)} className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive hover:bg-destructive/20 transition-all">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Form Modal */}
@@ -171,12 +178,17 @@ export default function AdminSchedules() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-semibold text-foreground mb-1 block">Kapasitas Kursi</label>
-                <input type="number" min={1} max={60} value={form.seat_capacity} onChange={e => setForm(f => ({ ...f, seat_capacity: +e.target.value }))} required className="input-binus" />
+                <label className="text-xs font-semibold text-foreground mb-1 block">Unit Bus</label>
+                <select value={form.bus_unit_id} onChange={e => setForm(f => ({ ...f, bus_unit_id: e.target.value }))} className="input-binus">
+                  <option value="">— Belum ditugaskan —</option>
+                  {busUnits.filter(b => b.status === 'active').map(b => (
+                    <option key={b.id} value={b.id}>{b.plate_number} ({b.seat_capacity} kursi)</option>
+                  ))}
+                </select>
               </div>
               <div className="flex items-center gap-3 py-2">
-                <input type="checkbox" id="via_base" checked={form.via_base} onChange={e => setForm(f => ({ ...f, via_base: e.target.checked }))} className="w-4 h-4 rounded" />
-                <label htmlFor="via_base" className="text-sm font-medium text-foreground">Melewati Binus Square</label>
+                <input type="checkbox" id="via_binus_square" checked={form.via_binus_square} onChange={e => setForm(f => ({ ...f, via_binus_square: e.target.checked }))} className="w-4 h-4 rounded" />
+                <label htmlFor="via_binus_square" className="text-sm font-medium text-foreground">Melewati Binus Square</label>
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => { setShowForm(false); setEditId(null); }} className="flex-1 py-2.5 rounded-xl border border-border text-foreground text-sm font-semibold">Batal</button>
