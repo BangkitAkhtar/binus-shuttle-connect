@@ -1,18 +1,27 @@
-import { Booking, Trip, User } from '../types';
+import { Booking, BusUnit, Trip, User } from '../types';
 import { generateTripsForDay } from './schedules';
 
 const today = new Date();
 const todayStr = today.toISOString().split('T')[0];
 
+// ===== BUS UNITS =====
+export const mockBusUnits: BusUnit[] = [
+  { id: 'bus1', plate_number: 'B 1234 ABC', seat_capacity: 20, status: 'active' },
+  { id: 'bus2', plate_number: 'B 5678 DEF', seat_capacity: 20, status: 'active' },
+  { id: 'bus3', plate_number: 'B 9012 GHI', seat_capacity: 20, status: 'maintenance' },
+];
+
+// ===== USERS =====
 export const mockUsers: User[] = [
   { id: 'u1', name: 'Andi Pratama', nim: '2501234567', role: 'student', faculty: 'School of Computer Science', password: 'binus123' },
   { id: 'u2', name: 'Sari Dewi', nim: '2501234568', role: 'student', faculty: 'School of Business Management', password: 'binus123' },
   { id: 'u3', name: 'Budi Santoso', nim: '2501234569', role: 'student', faculty: 'School of Design', password: 'binus123' },
-  { id: 'u4', name: 'Angga Saputra', driver_id: 'DRV001', role: 'driver', password: 'driver123', bus_unit: 'B 1234 ABC' },
-  { id: 'u5', name: 'Hendra Kusuma', driver_id: 'DRV002', role: 'driver', password: 'driver123', bus_unit: 'B 5678 DEF' },
+  { id: 'u4', name: 'Angga Saputra', driver_id: 'DRV001', role: 'driver', password: 'driver123', bus_unit_id: 'bus1' },
+  { id: 'u5', name: 'Hendra Kusuma', driver_id: 'DRV002', role: 'driver', password: 'driver123', bus_unit_id: 'bus2' },
   { id: 'u6', name: 'Super Admin', admin_id: 'ADM001', role: 'admin', password: 'admin123' },
 ];
 
+// ===== TRIPS =====
 export const initialTrips: Trip[] = generateTripsForDay(today);
 
 // Update some trip statuses for realism
@@ -25,24 +34,26 @@ initialTrips.forEach((t) => {
   else if (tripMinutes < nowMinutes) t.status = 'otw';
 });
 
-// Assign Angga (u4) to the next waiting trip so driver can test status flow
+// Assign Angga (u4) to next waiting trip with bus1
 const anggaTrip = initialTrips.find(t => t.status === 'waiting' && t.direction === 'anggrek_to_as')
   || initialTrips.find(t => t.status === 'waiting');
 if (anggaTrip) {
   anggaTrip.driver_id = 'u4';
-  anggaTrip.status = 'waiting'; // ensure it's waiting
-  // Also update Angga's assigned_trip_id
+  anggaTrip.bus_unit_id = 'bus1';
+  anggaTrip.status = 'waiting';
   mockUsers.find(u => u.id === 'u4')!.assigned_trip_id = anggaTrip.id;
 }
 
-// Assign Hendra to a different trip
+// Assign Hendra to a different trip with bus2
 const hendraTrip = initialTrips.find(t => t.status === 'waiting' && t.direction === 'as_to_anggrek' && t.id !== anggaTrip?.id)
   || initialTrips.find(t => t.id !== anggaTrip?.id && t.status !== 'completed');
 if (hendraTrip) {
   hendraTrip.driver_id = 'u5';
+  hendraTrip.bus_unit_id = 'bus2';
   mockUsers.find(u => u.id === 'u5')!.assigned_trip_id = hendraTrip.id;
 }
 
+// ===== BOOKINGS =====
 export const initialBookings: Booking[] = [
   {
     id: 'b1',
@@ -59,6 +70,7 @@ const STORAGE_KEYS = {
   users: 'binus_users',
   trips: 'binus_trips',
   bookings: 'binus_bookings',
+  busUnits: 'binus_bus_units',
   currentUser: 'binus_current_user',
 };
 
@@ -72,6 +84,18 @@ function initStorage() {
   if (!localStorage.getItem(STORAGE_KEYS.bookings)) {
     localStorage.setItem(STORAGE_KEYS.bookings, JSON.stringify(initialBookings));
   }
+  if (!localStorage.getItem(STORAGE_KEYS.busUnits)) {
+    localStorage.setItem(STORAGE_KEYS.busUnits, JSON.stringify(mockBusUnits));
+  }
+}
+
+export function getBusUnits(): BusUnit[] {
+  initStorage();
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.busUnits) || '[]');
+}
+
+export function saveBusUnits(units: BusUnit[]) {
+  localStorage.setItem(STORAGE_KEYS.busUnits, JSON.stringify(units));
 }
 
 export function getUsers(): User[] {
@@ -119,8 +143,13 @@ export function getBookingsForUser(userId: string): Booking[] {
   return getBookings().filter(b => b.user_id === userId && b.status !== 'cancelled');
 }
 
+export function getBusUnitById(id: string): BusUnit | undefined {
+  return getBusUnits().find(u => u.id === id);
+}
+
 export function resetStorage() {
   localStorage.removeItem(STORAGE_KEYS.users);
   localStorage.removeItem(STORAGE_KEYS.trips);
   localStorage.removeItem(STORAGE_KEYS.bookings);
+  localStorage.removeItem(STORAGE_KEYS.busUnits);
 }

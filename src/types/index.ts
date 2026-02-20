@@ -1,8 +1,16 @@
 export type Role = 'student' | 'driver' | 'admin';
 export type DayType = 'senin_kamis' | 'jumat' | 'sabtu';
-export type TripStatus = 'waiting' | 'otw' | 'arrived' | 'completed';
+export type TripStatus = 'waiting' | 'arrived' | 'otw' | 'completed';
 export type BookingStatus = 'booked' | 'checked_in' | 'completed' | 'cancelled';
 export type RouteDirection = 'anggrek_to_as' | 'as_to_anggrek';
+export type BusUnitStatus = 'active' | 'maintenance';
+
+export interface BusUnit {
+  id: string;
+  plate_number: string;
+  seat_capacity: number;
+  status: BusUnitStatus;
+}
 
 export interface User {
   id: string;
@@ -14,27 +22,27 @@ export interface User {
   faculty?: string;
   assigned_trip_id?: string;
   password?: string;
-  bus_unit?: string;
+  bus_unit_id?: string; // FK to BusUnit.id (driver only)
 }
 
 export interface Trip {
   id: string;
+  bus_unit_id?: string; // FK to BusUnit.id
+  driver_id?: string; // FK to User.id (driver)
   route_from: string;
   route_to: string;
   direction: RouteDirection;
   departure_time: string; // HH:MM
   day_type: DayType;
-  via_base: boolean;
+  via_binus_square: boolean;
   status: TripStatus;
-  seat_capacity: number;
-  driver_id?: string;
-  date?: string; // YYYY-MM-DD untuk hari ini
+  date?: string; // YYYY-MM-DD
 }
 
 export interface Booking {
   id: string;
-  user_id: string;
-  trip_id: string;
+  user_id: string; // FK to User.id
+  trip_id: string; // FK to Trip.id
   seat_number: number;
   status: BookingStatus;
   created_at: string;
@@ -42,7 +50,7 @@ export interface Booking {
 
 export interface ScheduleItem {
   time: string;
-  via_base: boolean;
+  via_binus_square: boolean;
   direction: RouteDirection;
   day_type: DayType;
 }

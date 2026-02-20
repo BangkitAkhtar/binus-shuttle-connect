@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getTrips, getUsers, getBookings } from '../../data/mockData';
-import { Trip, User, Booking } from '../../types';
+import { getTrips, getUsers, getBookings, getBusUnits } from '../../data/mockData';
+import { Trip, User, Booking, BusUnit } from '../../types';
 import { getDirectionLabel } from '../../data/schedules';
 
 function StatCard({ label, value, emoji, sub }: { label: string; value: number; emoji: string; sub?: string }) {
@@ -38,12 +38,16 @@ export default function AdminDashboard() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [busUnits, setBusUnits] = useState<BusUnit[]>([]);
 
   useEffect(() => {
     setTrips(getTrips());
     setUsers(getUsers());
     setBookings(getBookings());
+    setBusUnits(getBusUnits());
   }, []);
+
+  const getBusUnit = (id?: string) => busUnits.find(b => b.id === id);
 
   const students = users.filter(u => u.role === 'student');
   const drivers = users.filter(u => u.role === 'driver');
@@ -56,28 +60,62 @@ export default function AdminDashboard() {
 
   return (
     <div className="page-container max-w-3xl mx-auto animate-fade-in">
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Dashboard Admin</h1>
         <p className="text-sm text-muted-foreground">{todayStr}</p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
         <StatCard label="Mahasiswa Terdaftar" value={students.length} emoji="🎓" />
         <StatCard label="Pengemudi Aktif" value={drivers.length} emoji="🚌" />
         <StatCard label="Trip Hari Ini" value={trips.length} emoji="📅" sub={`${activeTrips.length} sedang aktif`} />
         <StatCard label="Total Pemesanan" value={totalBookings} emoji="🎫" sub={`${checkedIn} sudah check-in`} />
-        <StatCard label="Trip Aktif" value={activeTrips.length} emoji="🟢" />
+        <StatCard label="Unit Bus" value={busUnits.filter(b => b.status === 'active').length} emoji="🚐" sub={`${busUnits.length} total unit`} />
         <StatCard label="Trip Selesai" value={trips.filter(t => t.status === 'completed').length} emoji="✅" />
+      </div>
+
+      {/* Bus Units */}
+      <div className="mb-6">
+        <h2 className="section-title">Unit Bus</h2>
+        <div className="space-y-2">
+          {busUnits.map(unit => {
+            const assignedDriver = users.find(u => u.bus_unit_id === unit.id);
+            const assignedTrip = trips.find(t => t.bus_unit_id === unit.id);
+            return (
+              <div key={unit.id} className="card-binus flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-lg flex-shrink-0">🚐</div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground text-sm">{unit.plate_number}</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span className="text-xs text-muted-foreground">{unit.seat_capacity} kursi</span>
+                    {assignedDriver && <span className="text-xs text-muted-foreground">· 👤 {assignedDriver.name}</span>}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                    unit.status === 'active' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
+                  }`}>
+                    {unit.status === 'active' ? 'Aktif' : 'Maintenance'}
+                  </span>
+                  {assignedTrip && (
+                    <div className="mt-1">
+                      <TripStatusBadge status={assignedTrip.status} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Driver & Bus Units */}
       <div className="mb-6">
-        <h2 className="section-title">Status Pengemudi & Unit Bus</h2>
+        <h2 className="section-title">Status Pengemudi</h2>
         <div className="space-y-2">
           {drivers.map(driver => {
             const assignedTrip = trips.find(t => t.driver_id === driver.id);
+            const driverBusUnit = getBusUnit(driver.bus_unit_id);
             return (
               <div key={driver.id} className="card-binus flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-primary-foreground flex-shrink-0" style={{ background: 'var(--gradient-primary)' }}>
@@ -87,9 +125,9 @@ export default function AdminDashboard() {
                   <p className="font-semibold text-foreground text-sm">{driver.name}</p>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     <span className="text-xs text-muted-foreground font-mono">{driver.driver_id}</span>
-                    {(driver as any).bus_unit && (
+                    {driverBusUnit && (
                       <span className="text-[10px] bg-primary/8 text-primary px-1.5 py-0.5 rounded-md font-semibold">
-                        🚌 {(driver as any).bus_unit}
+                        🚌 {driverBusUnit.plate_number}
                       </span>
                     )}
                   </div>
@@ -117,7 +155,9 @@ export default function AdminDashboard() {
           {trips.map(trip => {
             const tripBookings = bookings.filter(b => b.trip_id === trip.id && b.status !== 'cancelled');
             const driver = users.find(u => u.id === trip.driver_id);
-            const fillPct = Math.round((tripBookings.length / trip.seat_capacity) * 100);
+            const tripBusUnit = getBusUnit(trip.bus_unit_id);
+            const capacity = tripBusUnit?.seat_capacity || 20;
+            const fillPct = Math.round((tripBookings.length / capacity) * 100);
             return (
               <div key={trip.id} className="card-binus">
                 <div className="flex items-center gap-3">
@@ -131,20 +171,15 @@ export default function AdminDashboard() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-semibold text-foreground">{getDirectionLabel(trip.direction)}</p>
-                      {trip.via_base && (
+                      {trip.via_binus_square && (
                         <span className="text-[10px] bg-accent/10 text-accent font-bold px-1.5 py-0.5 rounded-md">via Binus Square</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
-                      <span>{tripBookings.length}/{trip.seat_capacity} penumpang</span>
-                      {driver && (
-                        <span>· 🚌 {driver.name}</span>
-                      )}
-                      {(driver as any)?.bus_unit && (
-                        <span className="font-mono text-[10px]">({(driver as any).bus_unit})</span>
-                      )}
+                      <span>{tripBookings.length}/{capacity} penumpang</span>
+                      {driver && <span>· 👤 {driver.name}</span>}
+                      {tripBusUnit && <span className="font-mono text-[10px]">({tripBusUnit.plate_number})</span>}
                     </div>
-                    {/* Occupancy bar */}
                     <div className="mt-1.5 h-1 bg-muted rounded-full overflow-hidden w-32">
                       <div
                         className={`h-full rounded-full transition-all ${fillPct >= 90 ? 'bg-destructive' : fillPct >= 60 ? 'bg-warning' : 'bg-success'}`}

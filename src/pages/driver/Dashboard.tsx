@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getTrips, getBookings, saveTrips, getUsers } from '../../data/mockData';
-import { Trip, Booking, User } from '../../types';
+import { getTrips, getBookings, saveTrips, getUsers, getBusUnits } from '../../data/mockData';
+import { Trip, Booking, User, BusUnit } from '../../types';
 import { getDirectionLabel } from '../../data/schedules';
 
 const STATUS_FLOW: Record<string, { next: string; label: string; color: string } | null> = {
@@ -40,7 +40,7 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
     <div className="flex items-center gap-1 mt-3">
       {steps.map((step, i) => (
         <div key={step.key} className="flex items-center flex-1">
-          <div className={`flex flex-col items-center flex-1`}>
+          <div className="flex flex-col items-center flex-1">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm border-2 transition-all ${
               i < currentIdx ? 'bg-success border-success text-white' :
               i === currentIdx ? 'bg-primary border-primary text-white' :
@@ -67,12 +67,14 @@ export default function DriverDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [checkedIn, setCheckedIn] = useState(0);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [busUnits, setBusUnits] = useState<BusUnit[]>([]);
 
   const load = () => {
     const trips = getTrips();
     const driverTrip = trips.find(t => t.driver_id === user!.id);
     setTrip(driverTrip || null);
     setAllUsers(getUsers());
+    setBusUnits(getBusUnits());
     if (driverTrip) {
       const allBookings = getBookings();
       const tripBookings = allBookings.filter(b => b.trip_id === driverTrip.id && b.status !== 'cancelled');
@@ -91,6 +93,9 @@ export default function DriverDashboard() {
   };
 
   const nextAction = trip ? STATUS_FLOW[trip.status] : null;
+  const busUnit = trip?.bus_unit_id ? busUnits.find(b => b.id === trip.bus_unit_id) : undefined;
+  const driverBusUnit = user?.bus_unit_id ? busUnits.find(b => b.id === user.bus_unit_id) : undefined;
+  const seatCapacity = busUnit?.seat_capacity || 20;
 
   return (
     <div className="page-container max-w-2xl mx-auto animate-fade-in">
@@ -99,8 +104,8 @@ export default function DriverDashboard() {
         <h1 className="text-2xl font-bold text-foreground">{user?.name}</h1>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-mono">ID: {user?.driver_id}</span>
-          {user?.bus_unit && (
-            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">🚌 Unit: {user.bus_unit}</span>
+          {driverBusUnit && (
+            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">🚌 Unit: {driverBusUnit.plate_number}</span>
           )}
         </div>
       </div>
@@ -114,8 +119,11 @@ export default function DriverDashboard() {
                 <p className="text-xs opacity-70 uppercase tracking-wider font-medium">Trip Aktif Hari Ini</p>
                 <p className="text-4xl font-black mt-0.5">{trip.departure_time}</p>
                 <p className="text-sm opacity-80 mt-1">{getDirectionLabel(trip.direction)}</p>
-                {trip.via_base && (
+                {trip.via_binus_square && (
                   <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1 inline-block">via Binus Square</span>
+                )}
+                {busUnit && (
+                  <p className="text-xs opacity-70 mt-1">🚌 {busUnit.plate_number} · {busUnit.seat_capacity} kursi</p>
                 )}
               </div>
               <StatusBadge status={trip.status} />
@@ -128,7 +136,7 @@ export default function DriverDashboard() {
             {[
               { label: 'Total Pesan', value: bookings.length, emoji: '🎫', color: 'text-primary' },
               { label: 'Check-in', value: checkedIn, emoji: '✅', color: 'text-success' },
-              { label: 'Kapasitas', value: trip.seat_capacity, emoji: '💺', color: 'text-foreground' },
+              { label: 'Kapasitas', value: seatCapacity, emoji: '💺', color: 'text-foreground' },
             ].map((s, i) => (
               <div key={i} className="card-binus text-center py-3">
                 <div className="text-xl mb-1">{s.emoji}</div>
@@ -148,10 +156,7 @@ export default function DriverDashboard() {
               {trip.status === 'completed' && 'Trip hari ini telah selesai. Terima kasih!'}
             </p>
             {nextAction ? (
-              <button
-                onClick={() => updateStatus(nextAction.next)}
-                className={nextAction.color}
-              >
+              <button onClick={() => updateStatus(nextAction.next)} className={nextAction.color}>
                 {nextAction.label}
               </button>
             ) : (
