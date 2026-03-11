@@ -45,7 +45,6 @@ export default function AdminSchedules() {
         ...form,
         id: `custom-${Date.now()}`,
         date: new Date().toISOString().split('T')[0],
-        driver_id: undefined,
       };
       saveTrips([...all, newTrip]);
       showToast('✅ Jadwal ditambahkan');

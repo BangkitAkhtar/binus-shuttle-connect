@@ -16,9 +16,7 @@ export const mockUsers: User[] = [
   { id: 'u1', name: 'Andi Pratama', nim: '2501234567', role: 'student', faculty: 'School of Computer Science', password: 'binus123' },
   { id: 'u2', name: 'Sari Dewi', nim: '2501234568', role: 'student', faculty: 'School of Business Management', password: 'binus123' },
   { id: 'u3', name: 'Budi Santoso', nim: '2501234569', role: 'student', faculty: 'School of Design', password: 'binus123' },
-  { id: 'u4', name: 'Angga Saputra', driver_id: 'DRV001', role: 'driver', password: 'driver123', bus_unit_id: 'bus1' },
-  { id: 'u5', name: 'Hendra Kusuma', driver_id: 'DRV002', role: 'driver', password: 'driver123', bus_unit_id: 'bus2' },
-  { id: 'u6', name: 'Super Admin', admin_id: 'ADM001', role: 'admin', password: 'admin123' },
+  { id: 'u6', name: 'Staff Admin', admin_id: 'ADM001', role: 'admin', password: 'admin123' },
 ];
 
 // ===== TRIPS =====
@@ -34,24 +32,11 @@ initialTrips.forEach((t) => {
   else if (tripMinutes < nowMinutes) t.status = 'otw';
 });
 
-// Assign Angga (u4) to next waiting trip with bus1
-const anggaTrip = initialTrips.find(t => t.status === 'waiting' && t.direction === 'anggrek_to_as')
-  || initialTrips.find(t => t.status === 'waiting');
-if (anggaTrip) {
-  anggaTrip.driver_id = 'u4';
-  anggaTrip.bus_unit_id = 'bus1';
-  anggaTrip.status = 'waiting';
-  mockUsers.find(u => u.id === 'u4')!.assigned_trip_id = anggaTrip.id;
-}
-
-// Assign Hendra to a different trip with bus2
-const hendraTrip = initialTrips.find(t => t.status === 'waiting' && t.direction === 'as_to_anggrek' && t.id !== anggaTrip?.id)
-  || initialTrips.find(t => t.id !== anggaTrip?.id && t.status !== 'completed');
-if (hendraTrip) {
-  hendraTrip.driver_id = 'u5';
-  hendraTrip.bus_unit_id = 'bus2';
-  mockUsers.find(u => u.id === 'u5')!.assigned_trip_id = hendraTrip.id;
-}
+// Assign bus units to some trips
+const firstWaiting = initialTrips.find(t => t.status === 'waiting');
+if (firstWaiting) firstWaiting.bus_unit_id = 'bus1';
+const secondWaiting = initialTrips.find(t => t.status === 'waiting' && t.id !== firstWaiting?.id);
+if (secondWaiting) secondWaiting.bus_unit_id = 'bus2';
 
 // ===== BOOKINGS =====
 export const initialBookings: Booking[] = [
@@ -62,14 +47,14 @@ export const initialBookings: Booking[] = [
     seat_number: 3,
     status: 'booked',
     created_at: new Date().toISOString(),
+    booked_by: 'u6',
   },
 ];
 
 // Schema version - increment to auto-reset localStorage on schema changes
-const SCHEMA_VERSION = '3';
+const SCHEMA_VERSION = '4';
 const SCHEMA_KEY = 'binus_schema_version';
 
-// Storage keys
 const STORAGE_KEYS = {
   users: 'binus_users',
   trips: 'binus_trips',
@@ -79,7 +64,6 @@ const STORAGE_KEYS = {
 };
 
 function initStorage() {
-  // Auto-reset if schema version changed
   if (localStorage.getItem(SCHEMA_KEY) !== SCHEMA_VERSION) {
     Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
     localStorage.setItem(SCHEMA_KEY, SCHEMA_VERSION);

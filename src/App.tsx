@@ -7,15 +7,12 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import Layout from "./components/Layout";
 import LoginPage from "./pages/Login";
 import StudentDashboard from "./pages/student/Dashboard";
-import StudentSchedule from "./pages/student/Schedule";
 import StudentBookings from "./pages/student/Bookings";
 import StudentProfile from "./pages/student/Profile";
-import DriverDashboard from "./pages/driver/Dashboard";
-import DriverPassengers from "./pages/driver/Passengers";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminSchedules from "./pages/admin/Schedules";
 import AdminUsers from "./pages/admin/Users";
-import AdminDrivers from "./pages/admin/Drivers";
+import AdminBookings from "./pages/admin/Bookings";
 
 const queryClient = new QueryClient();
 
@@ -46,29 +43,22 @@ function AppRoutes() {
       <Routes>
         {/* Student */}
         <Route path="/student/dashboard" element={<StudentDashboard />} />
-        <Route path="/student/schedule" element={<StudentSchedule />} />
         <Route path="/student/bookings" element={<StudentBookings />} />
         <Route path="/student/profile" element={<StudentProfile />} />
 
-        {/* Driver */}
-        <Route path="/driver/dashboard" element={<DriverDashboard />} />
-        <Route path="/driver/passengers" element={<DriverPassengers />} />
-
-        {/* Admin */}
+        {/* Admin/Staff */}
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/schedules" element={<AdminSchedules />} />
         <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/admin/drivers" element={<AdminDrivers />} />
+        <Route path="/admin/bookings" element={<AdminBookings />} />
 
         {/* Default redirect */}
         <Route path="/" element={
           user.role === 'student' ? <Navigate to="/student/dashboard" replace /> :
-          user.role === 'driver' ? <Navigate to="/driver/dashboard" replace /> :
           <Navigate to="/admin/dashboard" replace />
         } />
         <Route path="*" element={
           user.role === 'student' ? <Navigate to="/student/dashboard" replace /> :
-          user.role === 'driver' ? <Navigate to="/driver/dashboard" replace /> :
           <Navigate to="/admin/dashboard" replace />
         } />
       </Routes>
