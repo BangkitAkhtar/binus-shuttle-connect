@@ -342,28 +342,32 @@ export default function AdminBookings() {
                 </div>
               )}
 
-              {/* Trip & Seat Selection */}
-              <div>
-                <label className="text-xs font-semibold text-foreground mb-1 block">Pilih Trip</label>
-                <select
-                  value={selectedTrip}
-                  onChange={e => { setSelectedTrip(e.target.value); setSelectedSeat(null); }}
-                  className="input-binus"
-                >
-                  <option value="">— Pilih Trip —</option>
-                  {trips.filter(t => t.status !== 'completed').map(t => {
-                    const bUnit = getBusUnit(t.bus_unit_id);
-                    const booked = bookings.filter(b => b.trip_id === t.id && b.status !== 'cancelled').length;
-                    const cap = bUnit?.seat_capacity || 20;
-                    return (
-                      <option key={t.id} value={t.id} disabled={booked >= cap}>
-                        {t.departure_time} · {getDirectionLabel(t.direction)} ({booked}/{cap} kursi)
-                        {t.via_binus_square ? ' · via BS' : ''}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
+              {/* Trip & Seat Selection — only for single trip, or multi trip after route is selected */}
+              {(tripType === 'single' || (tripType === 'multi' && selectedMultiRoute)) && (
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">
+                    {tripType === 'multi' ? 'Pilih Jadwal Keberangkatan' : 'Pilih Trip'}
+                  </label>
+                  <select
+                    value={selectedTrip}
+                    onChange={e => { setSelectedTrip(e.target.value); setSelectedSeat(null); }}
+                    className="input-binus"
+                  >
+                    <option value="">— {tripType === 'multi' ? 'Pilih Jadwal' : 'Pilih Trip'} —</option>
+                    {trips.filter(t => t.status !== 'completed').map(t => {
+                      const bUnit = getBusUnit(t.bus_unit_id);
+                      const booked = bookings.filter(b => b.trip_id === t.id && b.status !== 'cancelled').length;
+                      const cap = bUnit?.seat_capacity || 20;
+                      return (
+                        <option key={t.id} value={t.id} disabled={booked >= cap}>
+                          {t.departure_time} · {getDirectionLabel(t.direction)} ({booked}/{cap} kursi)
+                          {t.via_binus_square ? ' · via BS' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              )}
 
               {selectedTrip && selectedTripObj && (
                 <>
