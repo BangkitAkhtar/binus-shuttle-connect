@@ -52,8 +52,7 @@ export const initialBookings: Booking[] = [
   },
 ];
 
-// Schema version - increment to auto-reset localStorage on schema changes
-const SCHEMA_VERSION = '4';
+const SCHEMA_VERSION = '5';
 const SCHEMA_KEY = 'binus_schema_version';
 
 const STORAGE_KEYS = {
