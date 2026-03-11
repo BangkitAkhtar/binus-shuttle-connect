@@ -6,6 +6,12 @@ export type TripType = 'single' | 'multi';
 export type RouteDirection = 'anggrek_to_as' | 'as_to_anggrek';
 export type BusUnitStatus = 'active' | 'maintenance';
 
+export interface MultiRoute {
+  id: string;
+  label: string;
+  stops: string[]; // e.g. ['Alam Sutera', 'Kemanggisan', 'Binus Square']
+}
+
 export interface BusUnit {
   id: string;
   plate_number: string;
@@ -45,6 +51,5 @@ export interface Booking {
   created_at: string;
   booked_by?: string;
   trip_type: TripType;
-  booking_group_id?: string; // groups multi-trip legs together
-  leg_order?: number; // order of this leg in multi-trip (1, 2, 3...)
+  multi_route_id?: string; // which multi-stop route was selected
 }
