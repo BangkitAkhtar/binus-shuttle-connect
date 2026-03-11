@@ -43,5 +43,8 @@ export interface Booking {
   seat_number: number;
   status: BookingStatus;
   created_at: string;
-  booked_by?: string; // admin/staff user id who booked
+  booked_by?: string;
+  trip_type: TripType;
+  booking_group_id?: string; // groups multi-trip legs together
+  leg_order?: number; // order of this leg in multi-trip (1, 2, 3...)
 }
