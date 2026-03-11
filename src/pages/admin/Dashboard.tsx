@@ -50,10 +50,8 @@ export default function AdminDashboard() {
   const getBusUnit = (id?: string) => busUnits.find(b => b.id === id);
 
   const students = users.filter(u => u.role === 'student');
-  const drivers = users.filter(u => u.role === 'driver');
   const activeTrips = trips.filter(t => t.status === 'otw' || t.status === 'arrived');
   const totalBookings = bookings.filter(b => b.status !== 'cancelled').length;
-  const checkedIn = bookings.filter(b => b.status === 'checked_in').length;
 
   const today = new Date();
   const todayStr = today.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -61,17 +59,17 @@ export default function AdminDashboard() {
   return (
     <div className="page-container max-w-3xl mx-auto animate-fade-in">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Dashboard Admin</h1>
+        <h1 className="text-2xl font-bold text-foreground">Dashboard Staff</h1>
         <p className="text-sm text-muted-foreground">{todayStr}</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
         <StatCard label="Mahasiswa Terdaftar" value={students.length} emoji="🎓" />
-        <StatCard label="Pengemudi Aktif" value={drivers.length} emoji="🚌" />
         <StatCard label="Trip Hari Ini" value={trips.length} emoji="📅" sub={`${activeTrips.length} sedang aktif`} />
-        <StatCard label="Total Pemesanan" value={totalBookings} emoji="🎫" sub={`${checkedIn} sudah check-in`} />
-        <StatCard label="Unit Bus" value={busUnits.filter(b => b.status === 'active').length} emoji="🚐" sub={`${busUnits.length} total unit`} />
+        <StatCard label="Total Pemesanan" value={totalBookings} emoji="🎫" />
+        <StatCard label="Unit Bus Aktif" value={busUnits.filter(b => b.status === 'active').length} emoji="🚐" sub={`${busUnits.length} total unit`} />
         <StatCard label="Trip Selesai" value={trips.filter(t => t.status === 'completed').length} emoji="✅" />
+        <StatCard label="Trip Tersisa" value={trips.filter(t => t.status !== 'completed').length} emoji="⏳" />
       </div>
 
       {/* Bus Units */}
@@ -79,17 +77,13 @@ export default function AdminDashboard() {
         <h2 className="section-title">Unit Bus</h2>
         <div className="space-y-2">
           {busUnits.map(unit => {
-            const assignedDriver = users.find(u => u.bus_unit_id === unit.id);
-            const assignedTrip = trips.find(t => t.bus_unit_id === unit.id);
+            const assignedTrip = trips.find(t => t.bus_unit_id === unit.id && t.status !== 'completed');
             return (
               <div key={unit.id} className="card-binus flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-lg flex-shrink-0">🚐</div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-foreground text-sm">{unit.plate_number}</p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span className="text-xs text-muted-foreground">{unit.seat_capacity} kursi</span>
-                    {assignedDriver && <span className="text-xs text-muted-foreground">· 👤 {assignedDriver.name}</span>}
-                  </div>
+                  <span className="text-xs text-muted-foreground">{unit.seat_capacity} kursi</span>
                 </div>
                 <div className="text-right">
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
@@ -109,52 +103,12 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Driver & Bus Units */}
-      <div className="mb-6">
-        <h2 className="section-title">Status Pengemudi</h2>
-        <div className="space-y-2">
-          {drivers.map(driver => {
-            const assignedTrip = trips.find(t => t.driver_id === driver.id);
-            const driverBusUnit = getBusUnit(driver.bus_unit_id);
-            return (
-              <div key={driver.id} className="card-binus flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-primary-foreground flex-shrink-0" style={{ background: 'var(--gradient-primary)' }}>
-                  {driver.name.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground text-sm">{driver.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span className="text-xs text-muted-foreground font-mono">{driver.driver_id}</span>
-                    {driverBusUnit && (
-                      <span className="text-[10px] bg-primary/8 text-primary px-1.5 py-0.5 rounded-md font-semibold">
-                        🚌 {driverBusUnit.plate_number}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="text-right">
-                  {assignedTrip ? (
-                    <div>
-                      <TripStatusBadge status={assignedTrip.status} />
-                      <p className="text-[10px] text-muted-foreground mt-1">{assignedTrip.departure_time} · {getDirectionLabel(assignedTrip.direction).split(' ')[0]}→</p>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Tidak ada trip</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Trip List Today */}
       <div className="mb-6">
         <h2 className="section-title">Trip Hari Ini ({trips.length})</h2>
         <div className="space-y-2">
           {trips.map(trip => {
             const tripBookings = bookings.filter(b => b.trip_id === trip.id && b.status !== 'cancelled');
-            const driver = users.find(u => u.id === trip.driver_id);
             const tripBusUnit = getBusUnit(trip.bus_unit_id);
             const capacity = tripBusUnit?.seat_capacity || 20;
             const fillPct = Math.round((tripBookings.length / capacity) * 100);
@@ -177,7 +131,6 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
                       <span>{tripBookings.length}/{capacity} penumpang</span>
-                      {driver && <span>· 👤 {driver.name}</span>}
                       {tripBusUnit && <span className="font-mono text-[10px]">({tripBusUnit.plate_number})</span>}
                     </div>
                     <div className="mt-1.5 h-1 bg-muted rounded-full overflow-hidden w-32">

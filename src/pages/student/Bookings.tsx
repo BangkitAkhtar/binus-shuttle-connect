@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getBookingsForUser, getTrips, getBookings, getBusUnits } from '../../data/mockData';
+import { getBookingsForUser, getTrips, getBusUnits } from '../../data/mockData';
 import { Booking, Trip, BusUnit } from '../../types';
 import { getDirectionLabel } from '../../data/schedules';
 
@@ -99,7 +99,7 @@ function BookingReceipt({ booking, trip, userName, nim, faculty, busUnit }: {
         <div className="w-4 h-4 rounded-full bg-background border-2 border-dashed border-primary/30 absolute -right-2" />
       </div>
       <div className="bg-primary/5 px-4 py-2 text-center">
-        <p className="text-[10px] text-muted-foreground">Tunjukkan e-tiket ini kepada pengemudi saat boarding</p>
+        <p className="text-[10px] text-muted-foreground">Tunjukkan e-tiket ini saat boarding</p>
       </div>
     </div>
   );
@@ -111,7 +111,6 @@ export default function StudentBookings() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [busUnits, setBusUnits] = useState<BusUnit[]>([]);
   const [expandedReceipt, setExpandedReceipt] = useState<string | null>(null);
-  const [toast, setToast] = useState('');
 
   const load = () => {
     setBookings(getBookingsForUser(user!.id));
@@ -121,21 +120,12 @@ export default function StudentBookings() {
 
   useEffect(() => { load(); }, [user]);
 
-  // Poll for trip status updates from driver every 3 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTrips(getTrips());
-    }, 3000);
+    const interval = setInterval(() => setTrips(getTrips()), 3000);
     return () => clearInterval(interval);
   }, []);
 
   const getBusUnit = (id?: string) => busUnits.find(b => b.id === id);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3000);
-  };
-
   const getTrip = (tripId: string) => trips.find(t => t.id === tripId);
 
   const upcoming = bookings.filter(b => {
@@ -150,12 +140,6 @@ export default function StudentBookings() {
 
   return (
     <div className="page-container max-w-2xl mx-auto animate-fade-in">
-      {toast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background px-4 py-2.5 rounded-2xl text-sm font-medium shadow-lg animate-slide-up">
-          {toast}
-        </div>
-      )}
-
       <div className="mb-5">
         <h1 className="text-xl font-bold text-foreground">Tiket Saya</h1>
         <p className="text-sm text-muted-foreground">Riwayat pemesanan shuttle</p>
@@ -167,7 +151,7 @@ export default function StudentBookings() {
           <div className="card-binus text-center py-8">
             <div className="text-3xl mb-2">🎫</div>
             <p className="font-semibold text-foreground">Belum ada tiket aktif</p>
-            <p className="text-sm text-muted-foreground mt-1">Pesan shuttle dari halaman Jadwal</p>
+            <p className="text-sm text-muted-foreground mt-1">Hubungi staff untuk pemesanan tiket</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -197,20 +181,6 @@ export default function StudentBookings() {
                       </span>
                     </div>
                   </div>
-
-                  {/* Trip status indicator */}
-                  {trip.status !== 'waiting' && (
-                    <div className={`mb-3 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-                      trip.status === 'arrived' ? 'bg-success/10 text-success border border-success/20' :
-                      trip.status === 'otw' ? 'bg-info/10 text-info border border-info/20' :
-                      'bg-muted text-muted-foreground'
-                    }`}>
-                      <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
-                      {trip.status === 'arrived' && '🛑 Bus sudah di shelter — segera menuju lokasi!'}
-                      {trip.status === 'otw' && '🚌 Bus sedang dalam perjalanan (OTW)'}
-                      {trip.status === 'completed' && '✅ Trip telah selesai'}
-                    </div>
-                  )}
 
                   <button
                     onClick={() => setExpandedReceipt(expandedReceipt === booking.id ? null : booking.id)}

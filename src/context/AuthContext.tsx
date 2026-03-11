@@ -4,7 +4,7 @@ import { getCurrentUser, setCurrentUser, getUsers } from '../data/mockData';
 
 interface AuthContextType {
   user: User | null;
-  login: (id: string, password: string, role: 'student' | 'driver' | 'admin') => boolean;
+  login: (id: string, password: string, role: 'student' | 'admin') => boolean;
   logout: () => void;
   isLoading: boolean;
 }
@@ -21,19 +21,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = (id: string, password: string, role: 'student' | 'driver' | 'admin'): boolean => {
+  const login = (id: string, password: string, role: 'student' | 'admin'): boolean => {
     const users = getUsers();
     let found: User | undefined;
 
     if (role === 'student') {
       found = users.find(u => u.nim === id && u.role === 'student');
-    } else if (role === 'driver') {
-      found = users.find(u => u.driver_id === id && u.role === 'driver');
     } else {
       found = users.find(u => u.admin_id === id && u.role === 'admin');
     }
 
-    // Validate password (if user has password set, check it; otherwise allow any)
     if (found && found.password && found.password !== password) {
       return false;
     }

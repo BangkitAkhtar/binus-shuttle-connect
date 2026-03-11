@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import heroImage from '../assets/hero-shuttle.jpg';
 
-type Tab = 'student' | 'driver' | 'admin';
+type Tab = 'student' | 'admin';
 
 const tabConfig = {
   student: { label: 'Mahasiswa', placeholder: 'Masukkan NIM', hint: 'Contoh: 2501234567', passwordHint: 'Password: binus123' },
-  driver: { label: 'Pengemudi', placeholder: 'Masukkan Driver ID', hint: 'Contoh: DRV001', passwordHint: 'Password: driver123' },
-  admin: { label: 'Admin', placeholder: 'Masukkan Admin ID', hint: 'Contoh: ADM001', passwordHint: 'Password: admin123' },
+  admin: { label: 'Staff', placeholder: 'Masukkan Staff ID', hint: 'Contoh: ADM001', passwordHint: 'Password: admin123' },
 };
 
 export default function LoginPage() {
@@ -54,7 +53,6 @@ export default function LoginPage() {
       {/* Form Section */}
       <div className="flex-1 lg:max-w-md flex items-center justify-center p-6 bg-background">
         <div className="w-full max-w-sm animate-slide-up">
-          {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-2 mb-6">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-base" style={{ background: 'var(--gradient-primary)' }}>B</div>
             <div>
@@ -80,7 +78,6 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* ID Field */}
             <div>
               <label className="block text-sm font-semibold text-foreground mb-1.5">
                 {tabConfig[activeTab].label} ID
@@ -96,11 +93,8 @@ export default function LoginPage() {
               <p className="text-xs text-muted-foreground mt-1">{tabConfig[activeTab].hint}</p>
             </div>
 
-            {/* Password Field */}
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-1.5">
-                Password
-              </label>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -136,11 +130,7 @@ export default function LoginPage() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn-primary w-full flex items-center justify-center gap-2 py-3"
-            >
+            <button type="submit" disabled={isLoading} className="btn-primary w-full flex items-center justify-center gap-2 py-3">
               {isLoading ? (
                 <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -159,8 +149,7 @@ export default function LoginPage() {
             <p className="text-xs font-semibold text-muted-foreground mb-2">Demo Akun:</p>
             <div className="space-y-1 text-xs text-muted-foreground">
               <div><span className="font-medium text-foreground">Mahasiswa:</span> NIM 2501234567 · Password: binus123</div>
-              <div><span className="font-medium text-foreground">Pengemudi:</span> ID DRV001 · Password: driver123</div>
-              <div><span className="font-medium text-foreground">Admin:</span> ID ADM001 · Password: admin123</div>
+              <div><span className="font-medium text-foreground">Staff:</span> ID ADM001 · Password: admin123</div>
             </div>
           </div>
         </div>
