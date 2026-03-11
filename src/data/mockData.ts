@@ -48,6 +48,7 @@ export const initialBookings: Booking[] = [
     status: 'booked',
     created_at: new Date().toISOString(),
     booked_by: 'u6',
+    trip_type: 'single',
   },
 ];
 
