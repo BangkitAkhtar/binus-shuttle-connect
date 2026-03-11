@@ -48,11 +48,11 @@ export const initialBookings: Booking[] = [
     status: 'booked',
     created_at: new Date().toISOString(),
     booked_by: 'u6',
+    trip_type: 'single',
   },
 ];
 
-// Schema version - increment to auto-reset localStorage on schema changes
-const SCHEMA_VERSION = '4';
+const SCHEMA_VERSION = '5';
 const SCHEMA_KEY = 'binus_schema_version';
 
 const STORAGE_KEYS = {

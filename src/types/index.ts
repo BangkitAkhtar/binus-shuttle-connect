@@ -2,6 +2,7 @@ export type Role = 'student' | 'admin';
 export type DayType = 'senin_kamis' | 'jumat' | 'sabtu';
 export type TripStatus = 'waiting' | 'arrived' | 'otw' | 'completed';
 export type BookingStatus = 'booked' | 'checked_in' | 'completed' | 'cancelled';
+export type TripType = 'single' | 'multi';
 export type RouteDirection = 'anggrek_to_as' | 'as_to_anggrek';
 export type BusUnitStatus = 'active' | 'maintenance';
 
@@ -42,5 +43,8 @@ export interface Booking {
   seat_number: number;
   status: BookingStatus;
   created_at: string;
-  booked_by?: string; // admin/staff user id who booked
+  booked_by?: string;
+  trip_type: TripType;
+  booking_group_id?: string; // groups multi-trip legs together
+  leg_order?: number; // order of this leg in multi-trip (1, 2, 3...)
 }
