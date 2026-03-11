@@ -52,7 +52,7 @@ export const initialBookings: Booking[] = [
   },
 ];
 
-const SCHEMA_VERSION = '5';
+const SCHEMA_VERSION = '6';
 const SCHEMA_KEY = 'binus_schema_version';
 
 const STORAGE_KEYS = {

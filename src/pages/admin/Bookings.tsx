@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getTrips, getUsers, getBookings, saveBookings, getBusUnits } from '../../data/mockData';
 import { Trip, User, Booking, BusUnit, TripType } from '../../types';
 import { getDirectionLabel } from '../../data/schedules';
+import { multiRoutes, getMultiRouteById } from '../../data/multiRoutes';
 
 function SeatPicker({
   totalSeats,
@@ -76,114 +77,6 @@ function SeatPicker({
   );
 }
 
-interface TripLeg {
-  tripId: string;
-  seatNumber: number | null;
-}
-
-function TripLegForm({
-  legIndex,
-  leg,
-  trips,
-  bookings,
-  busUnits,
-  onUpdate,
-  onRemove,
-  canRemove,
-}: {
-  legIndex: number;
-  leg: TripLeg;
-  trips: Trip[];
-  bookings: Booking[];
-  busUnits: BusUnit[];
-  onUpdate: (leg: TripLeg) => void;
-  onRemove: () => void;
-  canRemove: boolean;
-}) {
-  const getBusUnit = (id?: string) => busUnits.find(b => b.id === id);
-  const selectedTripObj = trips.find(t => t.id === leg.tripId);
-  const tripBusUnit = selectedTripObj ? getBusUnit(selectedTripObj.bus_unit_id) : undefined;
-  const capacity = tripBusUnit?.seat_capacity || 20;
-  const occupiedSeats = bookings
-    .filter(b => b.trip_id === leg.tripId && b.status !== 'cancelled')
-    .map(b => b.seat_number);
-
-  return (
-    <div className="bg-muted/20 border border-border rounded-xl p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-foreground">
-          🚌 Leg {legIndex + 1}
-        </span>
-        {canRemove && (
-          <button onClick={onRemove} className="text-[10px] text-destructive font-semibold hover:underline">
-            Hapus
-          </button>
-        )}
-      </div>
-
-      <div>
-        <label className="text-xs font-semibold text-foreground mb-1 block">Pilih Trip</label>
-        <select
-          value={leg.tripId}
-          onChange={e => onUpdate({ ...leg, tripId: e.target.value, seatNumber: null })}
-          className="input-binus"
-        >
-          <option value="">— Pilih Trip —</option>
-          {trips.filter(t => t.status !== 'completed').map(t => {
-            const bUnit = getBusUnit(t.bus_unit_id);
-            const booked = bookings.filter(b => b.trip_id === t.id && b.status !== 'cancelled').length;
-            const cap = bUnit?.seat_capacity || 20;
-            return (
-              <option key={t.id} value={t.id} disabled={booked >= cap}>
-                {t.departure_time} · {getDirectionLabel(t.direction)} ({booked}/{cap} kursi)
-                {t.via_binus_square ? ' · via BS' : ''}
-              </option>
-            );
-          })}
-        </select>
-      </div>
-
-      {leg.tripId && selectedTripObj && (
-        <>
-          <div className="bg-muted rounded-xl p-3 space-y-1.5">
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Rute</span>
-              <span className="font-semibold text-foreground">{getDirectionLabel(selectedTripObj.direction)}</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Jam</span>
-              <span className="font-black text-primary">{selectedTripObj.departure_time}</span>
-            </div>
-            {tripBusUnit && (
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Bus</span>
-                <span className="font-semibold text-foreground">{tripBusUnit.plate_number}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Kursi Tersedia</span>
-              <span className="font-semibold text-foreground">{capacity - occupiedSeats.length}/{capacity}</span>
-            </div>
-          </div>
-
-          <SeatPicker
-            totalSeats={capacity}
-            occupiedSeats={occupiedSeats}
-            selectedSeat={leg.seatNumber}
-            onSelect={seat => onUpdate({ ...leg, seatNumber: seat })}
-          />
-
-          {leg.seatNumber && (
-            <div className="bg-success/10 border border-success/30 rounded-xl px-3 py-2 text-center">
-              <p className="text-success font-bold text-sm">💺 Kursi #{leg.seatNumber} dipilih</p>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
 export default function AdminBookings() {
   const { user: staffUser } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -193,7 +86,9 @@ export default function AdminBookings() {
   const [showForm, setShowForm] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [tripType, setTripType] = useState<TripType>('single');
-  const [legs, setLegs] = useState<TripLeg[]>([{ tripId: '', seatNumber: null }]);
+  const [selectedTrip, setSelectedTrip] = useState('');
+  const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
+  const [selectedMultiRoute, setSelectedMultiRoute] = useState('');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
 
@@ -213,109 +108,66 @@ export default function AdminBookings() {
     setShowForm(true);
     setSelectedStudent('');
     setTripType('single');
-    setLegs([{ tripId: '', seatNumber: null }]);
+    setSelectedTrip('');
+    setSelectedSeat(null);
+    setSelectedMultiRoute('');
   };
 
-  const handleTripTypeChange = (type: TripType) => {
-    setTripType(type);
-    if (type === 'single') {
-      setLegs([{ tripId: '', seatNumber: null }]);
-    } else {
-      setLegs([{ tripId: '', seatNumber: null }, { tripId: '', seatNumber: null }]);
-    }
-  };
+  const selectedTripObj = trips.find(t => t.id === selectedTrip);
+  const tripBusUnit = selectedTripObj ? getBusUnit(selectedTripObj.bus_unit_id) : undefined;
+  const capacity = tripBusUnit?.seat_capacity || 20;
+  const occupiedSeats = bookings
+    .filter(b => b.trip_id === selectedTrip && b.status !== 'cancelled')
+    .map(b => b.seat_number);
 
-  const addLeg = () => {
-    if (legs.length < 4) setLegs([...legs, { tripId: '', seatNumber: null }]);
-  };
-
-  const removeLeg = (index: number) => {
-    if (legs.length > 2) setLegs(legs.filter((_, i) => i !== index));
-  };
-
-  const updateLeg = (index: number, leg: TripLeg) => {
-    setLegs(legs.map((l, i) => i === index ? leg : l));
-  };
-
-  const allLegsValid = legs.every(l => l.tripId && l.seatNumber !== null);
-  const canSubmit = selectedStudent && allLegsValid;
+  const canSubmit = selectedStudent && selectedTrip && selectedSeat !== null && (tripType === 'single' || selectedMultiRoute);
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
 
-    // Check duplicates
-    for (const leg of legs) {
-      const existing = bookings.find(b => b.user_id === selectedStudent && b.trip_id === leg.tripId && b.status !== 'cancelled');
-      if (existing) {
-        showToast('❌ Mahasiswa sudah memiliki tiket untuk salah satu trip ini');
-        return;
-      }
+    const existing = bookings.find(b => b.user_id === selectedStudent && b.trip_id === selectedTrip && b.status !== 'cancelled');
+    if (existing) {
+      showToast('❌ Mahasiswa sudah memiliki tiket untuk trip ini');
+      return;
+    }
+
+    if (occupiedSeats.length >= capacity) {
+      showToast('❌ Kursi penuh!');
+      return;
     }
 
     setLoading(true);
     await new Promise(r => setTimeout(r, 500));
 
-    const groupId = tripType === 'multi' ? `grp-${Date.now()}` : undefined;
-    const newBookings: Booking[] = legs.map((leg, i) => ({
-      id: `b-${Date.now()}-${i}`,
+    const newBooking: Booking = {
+      id: `b-${Date.now()}`,
       user_id: selectedStudent,
-      trip_id: leg.tripId,
-      seat_number: leg.seatNumber!,
-      status: 'booked' as const,
+      trip_id: selectedTrip,
+      seat_number: selectedSeat!,
+      status: 'booked',
       created_at: new Date().toISOString(),
       booked_by: staffUser!.id,
       trip_type: tripType,
-      booking_group_id: groupId,
-      leg_order: tripType === 'multi' ? i + 1 : undefined,
-    }));
+      multi_route_id: tripType === 'multi' ? selectedMultiRoute : undefined,
+    };
 
     const allBookings = getBookings();
-    saveBookings([...allBookings, ...newBookings]);
+    saveBookings([...allBookings, newBooking]);
     setLoading(false);
     setShowForm(false);
     load();
-    showToast(`✅ ${tripType === 'multi' ? 'Multi-trip' : 'Tiket'} berhasil dipesan!`);
+    showToast('✅ Tiket berhasil dipesan!');
   };
 
   const handleCancelBooking = (bookingId: string) => {
     const allBookings = getBookings();
-    const target = allBookings.find(b => b.id === bookingId);
-    let updated: Booking[];
-
-    // If multi-trip, cancel all legs in the group
-    if (target?.booking_group_id) {
-      updated = allBookings.map(b =>
-        b.booking_group_id === target.booking_group_id ? { ...b, status: 'cancelled' as const } : b
-      );
-      showToast('Multi-trip dibatalkan');
-    } else {
-      updated = allBookings.map(b => b.id === bookingId ? { ...b, status: 'cancelled' as const } : b);
-      showToast('Tiket dibatalkan');
-    }
-
+    const updated = allBookings.map(b => b.id === bookingId ? { ...b, status: 'cancelled' as const } : b);
     saveBookings(updated);
     load();
+    showToast('Tiket dibatalkan');
   };
 
   const activeBookings = bookings.filter(b => b.status !== 'cancelled');
-
-  // Group bookings: group multi-trip by booking_group_id
-  const groupedBookings: { groupId: string | null; bookings: Booking[] }[] = [];
-  const processed = new Set<string>();
-
-  activeBookings.forEach(b => {
-    if (processed.has(b.id)) return;
-    if (b.booking_group_id) {
-      const group = activeBookings
-        .filter(x => x.booking_group_id === b.booking_group_id)
-        .sort((a, c) => (a.leg_order || 0) - (c.leg_order || 0));
-      group.forEach(x => processed.add(x.id));
-      groupedBookings.push({ groupId: b.booking_group_id, bookings: group });
-    } else {
-      processed.add(b.id);
-      groupedBookings.push({ groupId: null, bookings: [b] });
-    }
-  });
 
   return (
     <div className="page-container max-w-3xl mx-auto animate-fade-in">
@@ -340,74 +192,55 @@ export default function AdminBookings() {
 
       {/* Active Bookings */}
       <div className="space-y-2">
-        {groupedBookings.map((group, gi) => {
-          const isMulti = group.bookings.length > 1;
-          const firstBooking = group.bookings[0];
-          const student = students.find(u => u.id === firstBooking.user_id) || getUsers().find(u => u.id === firstBooking.user_id);
+        {activeBookings.map(b => {
+          const student = students.find(u => u.id === b.user_id) || getUsers().find(u => u.id === b.user_id);
+          const trip = trips.find(t => t.id === b.trip_id);
+          const bUnit = trip ? getBusUnit(trip.bus_unit_id) : undefined;
+          const multiRoute = b.multi_route_id ? getMultiRouteById(b.multi_route_id) : undefined;
 
           return (
-            <div key={group.groupId || firstBooking.id} className="card-binus">
-              <div className="flex items-center gap-3 mb-2">
+            <div key={b.id} className="card-binus">
+              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-primary-foreground flex-shrink-0" style={{ background: 'var(--gradient-primary)' }}>
                   {student?.name.charAt(0) || '?'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{student?.name || '—'}</p>
-                  <p className="text-xs text-muted-foreground">{student?.nim}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {student?.nim} · {trip?.departure_time} · {trip ? getDirectionLabel(trip.direction) : '—'}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-[10px] bg-primary/8 text-primary px-1.5 py-0.5 rounded-md font-semibold">Kursi #{b.seat_number}</span>
+                    {bUnit && <span className="text-[10px] text-muted-foreground">🚌 {bUnit.plate_number}</span>}
+                    {b.trip_type === 'multi' && multiRoute && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">
+                        🔄 {multiRoute.label}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  {isMulti && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">
-                      Multi-Trip · {group.bookings.length} Leg
-                    </span>
-                  )}
                   <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border ${
-                    firstBooking.status === 'booked' ? 'bg-primary/10 text-primary border-primary/20' :
-                    firstBooking.status === 'checked_in' ? 'bg-success/10 text-success border-success/20' :
+                    b.status === 'booked' ? 'bg-primary/10 text-primary border-primary/20' :
+                    b.status === 'checked_in' ? 'bg-success/10 text-success border-success/20' :
                     'bg-muted text-muted-foreground border-border'
                   }`}>
-                    {firstBooking.status === 'booked' ? 'Dipesan' : firstBooking.status === 'checked_in' ? 'Check-in' : 'Selesai'}
+                    {b.status === 'booked' ? 'Dipesan' : b.status === 'checked_in' ? 'Check-in' : 'Selesai'}
                   </span>
+                  {b.status === 'booked' && (
+                    <button
+                      onClick={() => handleCancelBooking(b.id)}
+                      className="text-[10px] text-destructive font-semibold hover:underline"
+                    >
+                      Batalkan
+                    </button>
+                  )}
                 </div>
               </div>
-
-              {/* Legs */}
-              <div className={`space-y-1.5 ${isMulti ? 'ml-13 pl-3 border-l-2 border-primary/20' : ''}`}>
-                {group.bookings.map((b, li) => {
-                  const trip = trips.find(t => t.id === b.trip_id);
-                  const bUnit = trip ? getBusUnit(trip.bus_unit_id) : undefined;
-                  return (
-                    <div key={b.id} className={`flex items-center gap-2 text-xs ${isMulti ? 'py-1' : ''}`}>
-                      {isMulti && (
-                        <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0">
-                          {li + 1}
-                        </span>
-                      )}
-                      <div className="flex-1">
-                        <span className="font-semibold text-foreground">{trip?.departure_time || '—'}</span>
-                        <span className="text-muted-foreground"> · {trip ? getDirectionLabel(trip.direction) : '—'}</span>
-                      </div>
-                      <span className="text-[10px] bg-primary/8 text-primary px-1.5 py-0.5 rounded-md font-semibold">Kursi #{b.seat_number}</span>
-                      {bUnit && <span className="text-[10px] text-muted-foreground">🚌 {bUnit.plate_number}</span>}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {firstBooking.status === 'booked' && (
-                <div className="mt-2 flex justify-end">
-                  <button
-                    onClick={() => handleCancelBooking(firstBooking.id)}
-                    className="text-[10px] text-destructive font-semibold hover:underline"
-                  >
-                    {isMulti ? 'Batalkan Semua' : 'Batalkan'}
-                  </button>
-                </div>
-              )}
             </div>
           );
         })}
-        {groupedBookings.length === 0 && (
+        {activeBookings.length === 0 && (
           <div className="card-binus text-center py-8 text-muted-foreground text-sm">
             Belum ada pemesanan
           </div>
@@ -423,11 +256,7 @@ export default function AdminBookings() {
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-semibold text-foreground mb-1 block">Pilih Mahasiswa</label>
-                <select
-                  value={selectedStudent}
-                  onChange={e => setSelectedStudent(e.target.value)}
-                  className="input-binus"
-                >
+                <select value={selectedStudent} onChange={e => setSelectedStudent(e.target.value)} className="input-binus">
                   <option value="">— Pilih Mahasiswa —</option>
                   {students.map(s => (
                     <option key={s.id} value={s.id}>{s.name} ({s.nim})</option>
@@ -441,7 +270,7 @@ export default function AdminBookings() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => handleTripTypeChange('single')}
+                    onClick={() => { setTripType('single'); setSelectedMultiRoute(''); }}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
                       tripType === 'single'
                         ? 'border-primary bg-primary/10 text-primary'
@@ -452,7 +281,7 @@ export default function AdminBookings() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleTripTypeChange('multi')}
+                    onClick={() => setTripType('multi')}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
                       tripType === 'multi'
                         ? 'border-accent bg-accent/10 text-accent'
@@ -465,47 +294,111 @@ export default function AdminBookings() {
                 <p className="text-[10px] text-muted-foreground mt-1.5">
                   {tripType === 'single'
                     ? 'Satu perjalanan langsung tanpa transit'
-                    : 'Perjalanan dengan transit atau lebih dari satu rute'}
+                    : 'Perjalanan dengan transit ke beberapa pemberhentian'}
                 </p>
               </div>
 
-              {/* Trip Legs */}
-              {tripType === 'single' ? (
-                <TripLegForm
-                  legIndex={0}
-                  leg={legs[0]}
-                  trips={trips}
-                  bookings={bookings}
-                  busUnits={busUnits}
-                  onUpdate={leg => updateLeg(0, leg)}
-                  onRemove={() => {}}
-                  canRemove={false}
-                />
-              ) : (
-                <>
-                  <div className="space-y-3">
-                    {legs.map((leg, i) => (
-                      <TripLegForm
-                        key={i}
-                        legIndex={i}
-                        leg={leg}
-                        trips={trips}
-                        bookings={bookings}
-                        busUnits={busUnits}
-                        onUpdate={l => updateLeg(i, l)}
-                        onRemove={() => removeLeg(i)}
-                        canRemove={legs.length > 2}
-                      />
+              {/* Multi Route Selection */}
+              {tripType === 'multi' && (
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">Pilih Rute Multi-Trip</label>
+                  <div className="space-y-2">
+                    {multiRoutes.map(route => (
+                      <button
+                        key={route.id}
+                        type="button"
+                        onClick={() => setSelectedMultiRoute(route.id)}
+                        className={`w-full text-left p-3 rounded-xl border-2 transition-all ${
+                          selectedMultiRoute === route.id
+                            ? 'border-accent bg-accent/10'
+                            : 'border-border hover:border-accent/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {route.stops.map((stop, i) => (
+                            <span key={i} className="flex items-center gap-1">
+                              <span className={`text-xs font-semibold ${selectedMultiRoute === route.id ? 'text-accent' : 'text-foreground'}`}>
+                                {stop}
+                              </span>
+                              {i < route.stops.length - 1 && (
+                                <span className="text-muted-foreground text-xs">→</span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="flex gap-1 mt-1.5">
+                          {route.stops.map((_, i) => (
+                            <div key={i} className="flex items-center gap-0.5">
+                              <div className={`w-2 h-2 rounded-full ${selectedMultiRoute === route.id ? 'bg-accent' : 'bg-muted-foreground/30'}`} />
+                              {i < route.stops.length - 1 && (
+                                <div className={`w-6 h-0.5 ${selectedMultiRoute === route.id ? 'bg-accent/50' : 'bg-border'}`} />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </button>
                     ))}
                   </div>
-                  {legs.length < 4 && (
-                    <button
-                      type="button"
-                      onClick={addLeg}
-                      className="w-full py-2 rounded-xl border-2 border-dashed border-border text-muted-foreground text-xs font-semibold hover:border-accent/50 hover:text-accent transition-all"
-                    >
-                      + Tambah Leg Transit
-                    </button>
+                </div>
+              )}
+
+              {/* Trip & Seat Selection */}
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">Pilih Trip</label>
+                <select
+                  value={selectedTrip}
+                  onChange={e => { setSelectedTrip(e.target.value); setSelectedSeat(null); }}
+                  className="input-binus"
+                >
+                  <option value="">— Pilih Trip —</option>
+                  {trips.filter(t => t.status !== 'completed').map(t => {
+                    const bUnit = getBusUnit(t.bus_unit_id);
+                    const booked = bookings.filter(b => b.trip_id === t.id && b.status !== 'cancelled').length;
+                    const cap = bUnit?.seat_capacity || 20;
+                    return (
+                      <option key={t.id} value={t.id} disabled={booked >= cap}>
+                        {t.departure_time} · {getDirectionLabel(t.direction)} ({booked}/{cap} kursi)
+                        {t.via_binus_square ? ' · via BS' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {selectedTrip && selectedTripObj && (
+                <>
+                  <div className="bg-muted rounded-xl p-3 space-y-1.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Rute</span>
+                      <span className="font-semibold text-foreground">{getDirectionLabel(selectedTripObj.direction)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Jam</span>
+                      <span className="font-black text-primary">{selectedTripObj.departure_time}</span>
+                    </div>
+                    {tripBusUnit && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Bus</span>
+                        <span className="font-semibold text-foreground">{tripBusUnit.plate_number}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Kursi Tersedia</span>
+                      <span className="font-semibold text-foreground">{capacity - occupiedSeats.length}/{capacity}</span>
+                    </div>
+                  </div>
+
+                  <SeatPicker
+                    totalSeats={capacity}
+                    occupiedSeats={occupiedSeats}
+                    selectedSeat={selectedSeat}
+                    onSelect={setSelectedSeat}
+                  />
+
+                  {selectedSeat && (
+                    <div className="bg-success/10 border border-success/30 rounded-xl px-3 py-2 text-center">
+                      <p className="text-success font-bold text-sm">💺 Kursi #{selectedSeat} dipilih</p>
+                    </div>
                   )}
                 </>
               )}
@@ -532,7 +425,7 @@ export default function AdminBookings() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                  ) : '🎫'} Pesan {tripType === 'multi' ? 'Multi-Trip' : 'Tiket'}
+                  ) : '🎫'} Pesan Tiket
                 </button>
               </div>
             </div>
