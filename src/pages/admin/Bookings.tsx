@@ -120,7 +120,7 @@ export default function AdminBookings() {
     .filter(b => b.trip_id === selectedTrip && b.status !== 'cancelled')
     .map(b => b.seat_number);
 
-  const canSubmit = selectedStudent && selectedTrip && selectedSeat !== null && (tripType === 'single' || selectedMultiRoute);
+  const canSubmit = selectedStudent && selectedTrip && selectedSeat !== null;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
