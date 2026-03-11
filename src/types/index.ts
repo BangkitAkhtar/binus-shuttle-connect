@@ -2,6 +2,7 @@ export type Role = 'student' | 'admin';
 export type DayType = 'senin_kamis' | 'jumat' | 'sabtu';
 export type TripStatus = 'waiting' | 'arrived' | 'otw' | 'completed';
 export type BookingStatus = 'booked' | 'checked_in' | 'completed' | 'cancelled';
+export type TripType = 'single' | 'multi';
 export type RouteDirection = 'anggrek_to_as' | 'as_to_anggrek';
 export type BusUnitStatus = 'active' | 'maintenance';
 
